@@ -1,0 +1,3356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablero de Cobranzas — Gestionar</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f4f3ef; --surface:#fff; --surface2:#f8f7f3;
+  --border:#e2e0d8; --border2:#ccc9be;
+  --text:#1a1916; --text2:#6b6860; --text3:#9c9a93;
+  --accent:#1a3a2a; --accent-l:#e8f0eb;
+  --red:#c0392b; --red-bg:#fdf0ee;
+  --amber:#b8680a; --amber-bg:#fef6e8;
+  --green:#1a7a4a; --green-bg:#eaf5ef;
+  --blue:#1a4a7a; --blue-bg:#eaf0f8;
+  --purple:#5a2d82; --purple-bg:#f3eef8;
+  --sh:0 1px 3px rgba(0,0,0,.06); --sh2:0 4px 12px rgba(0,0,0,.08);
+  --r:8px; --rl:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
+/* HEADER */
+.hdr{background:var(--accent);color:#fff;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:100;box-shadow:var(--sh2)}
+.hdr-title{font-size:15px;font-weight:600}
+.hdr-sub{font-size:10px;opacity:.6;margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.ds{font-size:11px;opacity:.7;background:rgba(255,255,255,.1);padding:3px 10px;border-radius:20px}
+.ds.ok{opacity:1;background:rgba(255,255,255,.2)}
+.reload-lbl{display:flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid rgba(255,255,255,.3);border-radius:var(--r);cursor:pointer;font-size:11px;color:#fff}
+.reload-lbl:hover{background:rgba(255,255,255,.1)}
+/* UPLOAD */
+#up{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 54px);padding:40px}
+.up-card{background:var(--surface);border-radius:var(--rl);border:2px dashed var(--border2);padding:52px 44px;text-align:center;max-width:460px;width:100%;cursor:pointer;transition:.2s}
+.up-card:hover,.up-card.drag{border-color:var(--accent);background:var(--accent-l)}
+.up-icon{font-size:44px;margin-bottom:14px}
+.up-card h2{font-size:17px;font-weight:600;margin-bottom:8px}
+.up-card p{color:var(--text2);font-size:12.5px;line-height:1.6}
+.up-hint{font-size:11px;color:var(--text3);margin-top:14px;background:var(--surface2);padding:7px 12px;border-radius:6px;font-family:'DM Mono',monospace}
+.up-btn{display:inline-flex;align-items:center;gap:5px;margin-top:18px;padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:500}
+.up-btn:hover{opacity:.85}
+/* APP */
+#app{display:none}
+.layout{display:flex;min-height:calc(100vh - 54px)}
+/* SIDEBAR */
+.sb{width:196px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:16px 0;position:sticky;top:54px;height:calc(100vh - 54px);overflow-y:auto}
+.sb-lbl{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.7px;text-transform:uppercase;padding:10px 10px 4px}
+.nb{display:flex;align-items:center;gap:7px;width:100%;padding:7px 10px;border:none;background:none;cursor:pointer;border-radius:var(--r);font-family:inherit;font-size:12px;color:var(--text2);text-align:left;transition:.15s}
+.nb:hover{background:var(--surface2);color:var(--text)}
+.nb.on{background:var(--accent-l);color:var(--accent);font-weight:600}
+.nb .ic{font-size:13px;width:17px;text-align:center}
+.nb-badge{background:var(--red);color:#fff;border-radius:10px;padding:0 5px;font-size:10px;margin-left:auto}
+/* MAIN */
+.mc{flex:1;padding:22px 26px;overflow-x:hidden}
+.pg{display:none}.pg.on{display:block}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.ptitle{font-size:19px;font-weight:600}
+.pmeta{font-size:11px;color:var(--text3);margin-top:2px}
+/* METRICS */
+.mets{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.met{background:var(--surface);border-radius:var(--rl);padding:14px;border:1px solid var(--border);box-shadow:var(--sh)}
+.met-lbl{font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:500}
+.met-val{font-size:21px;font-weight:600;line-height:1}
+.met-sub{font-size:10px;color:var(--text3);margin-top:3px}
+.vr{color:var(--red)}.va{color:var(--amber)}.vg{color:var(--green)}.vb{color:var(--blue)}
+/* CARD */
+.card{background:var(--surface);border-radius:var(--rl);border:1px solid var(--border);box-shadow:var(--sh)}
+.ch{padding:12px 14px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ct{font-size:13px;font-weight:600}
+.cb{padding:12px 14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+/* BARS */
+.br{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.bl{font-size:11px;color:var(--text2);width:156px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bt{flex:1;background:var(--surface2);border-radius:3px;height:9px;overflow:hidden}
+.bf{height:100%;border-radius:3px;transition:width .4s}
+.bv{font-size:11px;font-weight:500;min-width:88px;text-align:right;font-family:'DM Mono',monospace}
+/* BUCKETS */
+.bks{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:12px}
+.bk{border-radius:var(--r);padding:11px;text-align:center;border:1px solid}
+.bk0{background:var(--amber-bg);border-color:#f0c070;color:var(--amber)}
+.bk1{background:#fdf2ee;border-color:#f0a880;color:#b84e14}
+.bk2{background:var(--red-bg);border-color:#f0a0a0;color:var(--red)}
+.bk3{background:#f5e0e0;border-color:#e08080;color:#8b1a1a}
+.bk4{background:var(--purple-bg);border-color:#c0a0d8;color:var(--purple)}
+.bk-l{font-size:11px;font-weight:600;margin-bottom:3px}
+.bk-v{font-size:14px;font-weight:600;font-family:'DM Mono',monospace}
+.bk-c{font-size:10px;opacity:.7;margin-top:1px}
+/* TABLE */
+.tw{border:1px solid var(--border);border-radius:var(--rl);overflow:auto;margin-bottom:12px}
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl thead{background:var(--surface2)}
+.tbl th{padding:7px 9px;text-align:left;font-weight:600;color:var(--text2);font-size:10.5px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+.tbl th:hover{color:var(--text)}
+.tbl td{padding:6px 9px;border-bottom:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--surface2)}
+.tbl tfoot td{background:var(--surface2);font-weight:600;border-top:1px solid var(--border2)}
+/* BADGE */
+.bdg{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:600}
+.bdr{background:var(--red-bg);color:var(--red)}.bda{background:var(--amber-bg);color:var(--amber)}
+.bdg2{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+/* FILTERS */
+.flt{display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.flt input,.flt select,.fi{font-family:inherit;font-size:12px;padding:5px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);outline:none}
+.flt input:focus,.flt select:focus,.fi:focus{border-color:var(--accent)}
+.flt input{flex:1;min-width:160px}
+/* PAGINATION */
+.pag{display:flex;gap:5px;align-items:center;justify-content:flex-end;font-size:11px;color:var(--text2)}
+.pag button{padding:3px 9px;border:1px solid var(--border2);border-radius:6px;background:var(--surface);cursor:pointer;font-family:inherit;font-size:11px}
+.pag button:hover{background:var(--surface2)}
+/* RESP CARDS */
+.rg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.rc{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px;box-shadow:var(--sh)}
+.rc-name{font-size:13px;font-weight:600;margin-bottom:9px}
+.rc-kv{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)}
+.rc-kv:last-child{border:none}
+.rc-k{color:var(--text2)}.rc-v{font-weight:500;font-family:'DM Mono',monospace}
+/* PLAN */
+.ps-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:9px;padding-bottom:5px;border-bottom:2px solid var(--border)}
+.pi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;margin-bottom:7px;display:flex;gap:11px;box-shadow:var(--sh)}
+.pi.urgente{border-left:3px solid var(--red)}
+.pi.moderado{border-left:3px solid var(--amber)}
+.pi.normal{border-left:3px solid var(--green)}
+.pi.info{border-left:3px solid var(--blue)}
+.pi.done-i .pi-title{text-decoration:line-through;color:var(--text3)}
+.pi.done-i .pi-desc{color:var(--text3)}
+.pi-chk{width:17px;height:17px;border-radius:4px;border:2px solid var(--border2);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:.15s;background:none}
+.pi-chk.ck{background:var(--green);border-color:var(--green);color:#fff;font-size:10px}
+.pi-chk:hover{border-color:var(--accent)}
+.pi-body{flex:1}
+.pi-title{font-size:12px;font-weight:600;margin-bottom:2px}
+.pi-desc{font-size:11.5px;color:var(--text2);line-height:1.5}
+.ptag{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;margin-left:5px;vertical-align:middle}
+.ptag.hoy{background:var(--red-bg);color:var(--red)}
+.ptag.semana{background:var(--amber-bg);color:var(--amber)}
+.ptag.seguimiento{background:var(--blue-bg);color:var(--blue)}
+.prog-w{background:var(--surface2);border-radius:20px;height:5px;overflow:hidden;margin-top:7px}
+.prog-b{height:100%;border-radius:20px;background:var(--green);transition:width .3s}
+/* CECILIA */
+.cg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+/* MAIL */
+.mail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);box-shadow:var(--sh);overflow:hidden;margin-top:10px}
+.mail-hdr{background:var(--surface2);padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+.mf{font-size:11px;color:var(--text2)}.mf span{color:var(--text);font-weight:500}
+.mail-body{padding:14px;font-size:12.5px;line-height:1.85}
+.mail-tbl{width:100%;border-collapse:collapse;font-size:11px;margin:9px 0}
+.mail-tbl th{padding:5px 8px;background:var(--surface2);text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border)}
+.mail-tbl td{padding:5px 8px;border-bottom:1px solid var(--border)}
+.mail-tbl tfoot td{background:var(--surface2);font-weight:600}
+/* SEMAFORO */
+.sem{display:flex;align-items:center;gap:5px}
+.sd{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+/* COMBO SEARCH */
+.combo{position:relative;display:inline-block;min-width:360px}
+.combo-iw{display:flex;align-items:center;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface)}
+.combo-iw:focus-within{border-color:var(--accent)}
+.combo-in{flex:1;padding:7px 11px;font-family:inherit;font-size:12.5px;border:none;background:transparent;color:var(--text);outline:none}
+.combo-x{padding:0 9px;cursor:pointer;color:var(--text3);font-size:15px;background:none;border:none}
+.combo-x:hover{color:var(--text)}
+.combo-drop{display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);box-shadow:var(--sh2);max-height:250px;overflow-y:auto;z-index:200}
+.combo-drop.open{display:block}
+.combo-opt{padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border)}
+.combo-opt:last-child{border:none}
+.combo-opt:hover{background:var(--accent-l);color:var(--accent)}
+.combo-opt em{font-style:normal;color:var(--text3);font-size:10px;margin-left:4px}
+.combo-empty{padding:10px 12px;font-size:12px;color:var(--text3);text-align:center}
+/* CRM */
+.crm-lay{display:grid;grid-template-columns:280px 1fr;gap:14px}
+.crm-list{max-height:calc(100vh - 200px);overflow-y:auto}
+.crm-ai{padding:9px 11px;border-radius:var(--r);cursor:pointer;border:1px solid transparent;margin-bottom:3px;transition:.15s}
+.crm-ai:hover{background:var(--surface2);border-color:var(--border)}
+.crm-ai.sel{background:var(--accent-l);border-color:var(--accent)}
+.crm-ai-name{font-size:12px;font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crm-ai-meta{font-size:10.5px;color:var(--text3);display:flex;gap:5px}
+.crm-tabs{display:flex;gap:3px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.crm-tab{padding:6px 13px;font-size:12px;cursor:pointer;border:none;background:none;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit}
+.crm-tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+/* TIMELINE */
+.tl{display:flex;flex-direction:column;gap:9px}
+.tl-it{display:flex;gap:10px}
+.tl-dw{display:flex;flex-direction:column;align-items:center}
+.tl-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;box-shadow:0 0 0 1px var(--border)}
+.tl-line{width:1px;flex:1;background:var(--border);margin:2px 0}
+.tl-b{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:9px 11px;box-shadow:var(--sh)}
+.tl-h{display:flex;justify-content:space-between;margin-bottom:3px}
+.tl-title{font-size:12px;font-weight:600}
+.tl-date{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace}
+.tl-note{font-size:12px;color:var(--text2);line-height:1.55}
+.tr-pos{background:var(--green-bg);color:var(--green);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;display:inline-block;margin-top:4px}
+.tr-neu{background:var(--surface2);color:var(--text2);border:1px solid var(--border);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;display:inline-block;margin-top:4px}
+.tr-neg{background:var(--red-bg);color:var(--red);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;display:inline-block;margin-top:4px}
+.tr-pago{background:var(--accent-l);color:var(--accent);font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;display:inline-block;margin-top:4px}
+/* FORM */
+.aform{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rl);padding:12px;margin-bottom:12px}
+.aform h4{font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:9px}
+.frow{display:flex;gap:7px;margin-bottom:7px;flex-wrap:wrap}
+.frow input,.frow select,.frow textarea{font-family:inherit;font-size:12px;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);outline:none;flex:1}
+.frow input:focus,.frow select:focus,.frow textarea:focus{border-color:var(--accent)}
+.frow textarea{min-height:58px;resize:vertical}
+/* BUTTONS */
+.btn-p{padding:6px 15px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-family:inherit;font-size:12px;font-weight:500}
+.btn-p:hover{opacity:.85}
+.btn-s{padding:6px 13px;background:var(--surface);color:var(--text2);border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;font-family:inherit;font-size:12px}
+.btn-s:hover{background:var(--surface2)}
+.btn-d{padding:3px 9px;background:var(--red-bg);color:var(--red);border:1px solid #f0a0a0;border-radius:var(--r);cursor:pointer;font-family:inherit;font-size:11px}
+.btn-exp{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);cursor:pointer;font-family:inherit;font-size:11px;color:var(--text2)}
+.btn-exp:hover{background:var(--surface2)}
+.copy-btn{padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-family:inherit;font-size:11px;font-weight:500}
+.copy-btn:hover{opacity:.85}
+.copy-btn.ok{background:var(--green)}
+/* REMINDERS */
+.rem-list{display:flex;flex-direction:column;gap:7px}
+.rem-it{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:9px 11px;display:flex;gap:9px;align-items:flex-start;box-shadow:var(--sh)}
+.rem-it.ov{border-left:3px solid var(--red)}
+.rem-it.td{border-left:3px solid var(--amber)}
+.rem-it.fu{border-left:3px solid var(--green)}
+.ri-date{font-size:11px;font-family:'DM Mono',monospace;font-weight:500;min-width:78px}
+.ri-body{flex:1}
+.ri-title{font-size:12px;font-weight:600;margin-bottom:1px}
+.ri-meta{font-size:10.5px;color:var(--text3)}
+.ri-acts{display:flex;gap:4px}
+/* PROMESA */
+.prom{background:var(--amber-bg);border:1px solid #f0c070;border-radius:var(--rl);padding:11px 13px;margin-bottom:8px}
+.prom.cum{background:var(--green-bg);border-color:#a0d8b0}
+.prom.ven{background:var(--red-bg);border-color:#f0a0a0}
+/* ALERTS */
+.albar{background:var(--red-bg);border:1px solid #f0a0a0;border-radius:var(--rl);padding:9px 13px;margin-bottom:11px;display:flex;gap:9px;align-items:center}
+.albar-n{font-size:19px;font-weight:700;color:var(--red);min-width:30px}
+.albar-t{font-size:12px;color:var(--red);flex:1}
+/* MINI STATS */
+.minis{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:11px}
+.mini{background:var(--surface2);border-radius:var(--r);padding:9px;text-align:center}
+.mini-v{font-size:17px;font-weight:600}
+.mini-l{font-size:10px;color:var(--text3);margin-top:2px}
+/* ENVIO MASIVO */
+.cfg-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px;margin-bottom:14px;box-shadow:var(--sh)}
+.cfg-title{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.cfg-row{display:flex;gap:10px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+.cfg-row label{font-size:12px;color:var(--text2);min-width:140px;flex-shrink:0}
+.cfg-row input,.cfg-row select{font-family:inherit;font-size:12px;padding:6px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);outline:none;flex:1;min-width:200px}
+.cfg-row input:focus{border-color:var(--accent)}
+.oauth-status{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600}
+.oauth-ok{background:var(--green-bg);color:var(--green)}
+.oauth-no{background:var(--red-bg);color:var(--red)}
+.oauth-wait{background:var(--amber-bg);color:var(--amber)}
+.envio-grid{display:grid;grid-template-columns:1fr 340px;gap:14px}
+.admin-checklist{max-height:calc(100vh - 280px);overflow-y:auto}
+.ac-item{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s}
+.ac-item:hover{background:var(--surface2)}
+.ac-item:last-child{border:none}
+.ac-chk{width:16px;height:16px;border-radius:3px;border:2px solid var(--border2);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:1px;background:var(--surface)}
+.ac-chk.on{background:var(--accent);border-color:var(--accent);color:#fff;font-size:10px}
+.ac-info{flex:1}
+.ac-name{font-size:12px;font-weight:600;margin-bottom:1px}
+.ac-meta{font-size:10.5px;color:var(--text3)}
+.ac-email{font-size:10.5px;color:var(--blue);font-family:'DM Mono',monospace}
+.ac-sem{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.envio-panel{display:flex;flex-direction:column;gap:10px}
+.envio-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px;box-shadow:var(--sh)}
+.envio-log{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px;box-shadow:var(--sh);max-height:300px;overflow-y:auto}
+.log-item{font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+.log-item:last-child{border:none}
+.log-ok{color:var(--green)}.log-err{color:var(--red)}.log-wait{color:var(--amber)}.log-info{color:var(--blue)}
+.progress-envio{background:var(--surface2);border-radius:20px;height:8px;overflow:hidden;margin:8px 0}
+.progress-envio-bar{height:100%;border-radius:20px;background:var(--accent);transition:width .4s}
+.btn-send-all{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn-send-all:hover{opacity:.85}
+.btn-send-all:disabled{opacity:.4;cursor:not-allowed}
+.sel-actions{display:flex;gap:6px;padding:8px 11px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.envio-filter{display:flex;gap:6px;padding:8px 11px;border-bottom:1px solid var(--border)}
+.envio-filter input,.envio-filter select{font-family:inherit;font-size:11px;padding:4px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);outline:none}
+.envio-filter input{flex:1}
+/* ADMIN PANEL */
+.admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.admin-overlay.open{display:flex}
+.admin-box{background:var(--surface);border-radius:var(--rl);padding:28px;width:420px;box-shadow:0 8px 40px rgba(0,0,0,.25)}
+.admin-box h2{font-size:16px;font-weight:700;margin-bottom:4px}
+.admin-box p{font-size:12px;color:var(--text2);margin-bottom:20px}
+.admin-field{margin-bottom:12px}
+.admin-field label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.admin-field input{width:100%;font-family:inherit;font-size:13px;padding:8px 11px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);outline:none}
+.admin-field input:focus{border-color:var(--accent)}
+.admin-err{font-size:11px;color:var(--red);margin-top:8px;display:none}
+.admin-section{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+.admin-section-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.admin-trigger{position:fixed;bottom:16px;right:16px;width:36px;height:36px;background:var(--accent);border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:var(--sh2);z-index:99;opacity:.35;transition:opacity .2s}
+.admin-trigger:hover{opacity:1}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+@media(max-width:900px){
+  .sb{width:48px}.nb span:not(.ic){display:none}.mc{padding:14px}
+  .mets{grid-template-columns:repeat(2,1fr)}.bks{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:1fr}.cg{grid-template-columns:1fr}.rg{grid-template-columns:1fr}
+  .crm-lay{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ADMIN TRIGGER: siempre visible, esquina inferior derecha -->
+<button class="admin-trigger" onclick="openAdmin()" title="Panel administrador — solo administrador">⚙</button>
+
+<header class="hdr">
+  <div>
+    <div class="hdr-title">📊 Tablero de Cobranzas</div>
+    <div class="hdr-sub">Gestionar — Uso interno del equipo</div>
+  </div>
+  <div class="hdr-right">
+    <div class="ds" id="dstatus">Sin datos</div>
+    <label class="reload-lbl">
+      ↑ Cargar Excel
+      <input type="file" accept=".xlsx,.xls" style="display:none" onchange="loadFile(this.files[0])">
+    </label>
+    <button class="reload-lbl" onclick="loadFromOdoo()" style="cursor:pointer;border:none;background:rgba(255,255,255,.15)">🔗 Actualizar Odoo</button>
+  </div>
+</header>
+
+<div id="up">
+  <div class="up-card" id="dropzone"
+    ondragover="event.preventDefault();this.classList.add('drag')"
+    ondragleave="this.classList.remove('drag')"
+    ondrop="event.preventDefault();this.classList.remove('drag');loadFile(event.dataTransfer.files[0])">
+    <div class="up-icon">📂</div>
+    <h2>Cargar reporte de Odoo</h2>
+    <p>Arrastrá el Excel exportado desde Odoo, o hacé click para buscarlo.</p>
+    <div class="up-hint">Asiento_contable_(account_move)_*.xlsx</div>
+    <button class="up-btn" onclick="document.getElementById('fi').click()">📁 Seleccionar Excel</button>
+    <input type="file" id="fi" accept=".xlsx,.xls" style="display:none" onchange="loadFile(this.files[0])">
+    <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+      <div style="flex:1;height:1px;background:var(--border2)"></div>
+      <span style="font-size:11px;color:var(--text3)">o</span>
+      <div style="flex:1;height:1px;background:var(--border2)"></div>
+    </div>
+    <button class="up-btn" id="btn-load-odoo" onclick="loadFromOdoo()" style="margin-top:12px;background:var(--blue)">
+      🔗 Cargar desde Odoo directamente
+    </button>
+    <div style="font-size:10px;color:var(--text3);margin-top:6px">Conecta a gestionar.adhoc.ar y trae las facturas pendientes</div>
+  </div>
+</div>
+
+<div id="app">
+<div class="layout">
+<nav class="sb">
+  <div class="sb-lbl">Tablero</div>
+  <button class="nb on" onclick="goPg('resumen')" id="nb-resumen"><span class="ic">📈</span><span>Resumen</span></button>
+  <button class="nb" onclick="goPg('aging')" id="nb-aging"><span class="ic">⏱</span><span>Aging</span></button>
+  <button class="nb" onclick="goPg('facturas')" id="nb-facturas"><span class="ic">📋</span><span>Facturas</span></button>
+  <div class="sb-lbl">Por administración</div>
+  <button class="nb" onclick="goPg('cc')" id="nb-cc"><span class="ic">🏢</span><span>Cta. Corriente</span></button>
+  <button class="nb" onclick="goPg('mail')" id="nb-mail"><span class="ic">✉️</span><span>Mail</span></button>
+  <div class="sb-lbl">Equipo</div>
+  <button class="nb" onclick="goPg('resps')" id="nb-resps"><span class="ic">👤</span><span>Responsables</span></button>
+  <button class="nb" onclick="goPg('plan')" id="nb-plan"><span class="ic">🎯</span><span>Plan de acción</span></button>
+  <button class="nb" onclick="goPg('cecilia')" id="nb-cecilia"><span class="ic">👩‍💼</span><span>Vista Cecilia</span></button>
+  <div class="sb-lbl">Gestión</div>
+  <button class="nb" onclick="goPg('crm')" id="nb-crm"><span class="ic">💼</span><span>Gestión CRM</span></button>
+  <button class="nb" onclick="goPg('alertas')" id="nb-alertas"><span class="ic">🔔</span><span>Alertas <span id="abadge" class="nb-badge" style="display:none"></span></span></button>
+  <div class="sb-lbl">Envio</div>
+  <button class="nb" onclick="goPg('envio')" id="nb-envio"><span class="ic">🚀</span><span>Envío masivo</span></button>
+  <button class="nb" onclick="goPg('config')" id="nb-config"><span class="ic">⚙️</span><span>Configuración</span></button>
+</nav>
+<main class="mc">
+
+<!-- RESUMEN -->
+<div class="pg on" id="pg-resumen">
+  <div class="topbar"><div><div class="ptitle">Resumen general</div><div class="pmeta" id="resumen-meta"></div></div></div>
+  <div class="mets" id="mets-resumen"></div>
+  <div class="g2">
+    <div class="card"><div class="ch"><span class="ct">Aging — saldo por tramo</span></div><div class="cb" id="aging-bars"></div></div>
+    <div class="card"><div class="ch"><span class="ct">Por responsable</span></div><div class="cb" id="resp-bars"></div></div>
+  </div>
+  <div class="card"><div class="ch"><span class="ct">Por administración</span></div><div class="cb" id="admin-bars"></div></div>
+</div>
+
+<!-- AGING -->
+<div class="pg" id="pg-aging">
+  <div class="topbar"><div><div class="ptitle">Aging de deuda</div><div class="pmeta">Clasificado por antigüedad de mora</div></div></div>
+  <div class="bks" id="bk-cards"></div>
+  <div class="card"><div class="ch"><span class="ct">Detalle</span></div><div class="cb">
+    <div class="flt">
+      <input type="text" id="ag-q" placeholder="Buscar consorcio..." oninput="renderAging()">
+      <select id="ag-bk" onchange="renderAging()"><option value="">Todos los tramos</option><option value="1-30">1–30d</option><option value="31-60">31–60d</option><option value="61-90">61–90d</option><option value="+120">+120d</option></select>
+      <select id="ag-resp" onchange="renderAging()"><option value="">Todos los responsables</option></select>
+      <select id="ag-adm" onchange="renderAging()"><option value="">Todas las admins</option></select>
+    </div>
+    <div class="tw"><table class="tbl"><thead><tr>
+      <th onclick="srt('ag','cliente')">Consorcio</th><th onclick="srt('ag','producto')">Producto</th>
+      <th onclick="srt('ag','fechaVenc')">Vencimiento</th><th style="text-align:center" onclick="srt('ag','dias')">Días ↕</th>
+      <th>Tramo</th><th style="text-align:right" onclick="srt('ag','saldo')">Saldo</th>
+      <th>Responsable</th><th>Vendedor</th><th>Admin</th>
+    </tr></thead><tbody id="ag-tbody"></tbody></table></div>
+  </div></div>
+</div>
+
+<!-- FACTURAS -->
+<div class="pg" id="pg-facturas">
+  <div class="topbar"><div><div class="ptitle">Todas las facturas</div><div class="pmeta" id="fact-meta"></div></div></div>
+  <div class="card"><div class="cb">
+    <div class="flt">
+      <input type="text" id="fq" placeholder="Buscar consorcio, número, producto..." oninput="filterFact()">
+      <select id="fe" onchange="filterFact()"><option value="">Todos los estados</option><option value="Sin pagar">Sin pagar</option><option value="En proceso de pago">En proceso</option></select>
+      <select id="fr" onchange="filterFact()"><option value="">Todos los responsables</option></select>
+      <select id="fb" onchange="filterFact()"><option value="">Todos los tramos</option><option value="1-30">1-30d</option><option value="31-60">31-60d</option><option value="61-90">61-90d</option><option value="+120">+120d</option></select>
+      <select id="fa" onchange="filterFact()"><option value="">Todas las admins</option></select>
+    </div>
+    <div class="tw"><table class="tbl"><thead><tr>
+      <th onclick="srt('f','cliente')">Consorcio</th><th>N° Factura</th><th>Producto</th>
+      <th onclick="srt('f','fechaVenc')">Vencimiento</th><th style="text-align:center" onclick="srt('f','dias')">Días</th>
+      <th>Tramo</th><th style="text-align:right" onclick="srt('f','total')">Total</th>
+      <th style="text-align:right" onclick="srt('f','saldo')">Saldo real</th>
+      <th>Estado</th><th>Resp.</th><th>Admin</th>
+    </tr></thead><tbody id="f-tbody"></tbody></table></div>
+    <div class="pag"><span id="fpag"></span><button onclick="fchg(-1)">‹</button><button onclick="fchg(1)">›</button></div>
+  </div></div>
+</div>
+
+<!-- CUENTA CORRIENTE -->
+<div class="pg" id="pg-cc">
+  <div class="topbar"><div><div class="ptitle">Cuenta corriente por administración</div><div class="pmeta">Vista consolidada de todos los consorcios</div></div></div>
+  <div style="margin-bottom:12px"><div class="combo" id="combo-cc"></div></div>
+  <div id="cc-cont"></div>
+</div>
+
+<!-- MAIL -->
+<div class="pg" id="pg-mail">
+  <div class="topbar"><div><div class="ptitle">Plantilla de mail</div><div class="pmeta">Lista para copiar — se adapta al semáforo de mora</div></div></div>
+  <div style="margin-bottom:12px"><div class="combo" id="combo-mail"></div></div>
+  <div id="mail-cont"></div>
+</div>
+
+<!-- RESPONSABLES -->
+<div class="pg" id="pg-resps">
+  <div class="topbar"><div><div class="ptitle">Cartera por responsable</div></div></div>
+  <div class="rg" id="resp-cards"></div>
+  <div class="card"><div class="ch"><span class="ct">Detalle</span>
+    <select id="rd-sel" onchange="renderRD()" class="fi" style="font-size:11px;padding:4px 8px"><option value="">— Seleccionar —</option></select>
+  </div><div class="cb" id="rd-body"></div></div>
+</div>
+
+<!-- PLAN -->
+<div class="pg" id="pg-plan">
+  <div class="topbar">
+    <div><div class="ptitle">Plan de acción</div><div class="pmeta">Sugerencias personalizadas por cartera</div></div>
+    <select id="plan-sel" onchange="renderPlan()" class="fi" style="font-size:12px;padding:6px 11px"><option value="">— Seleccionar responsable —</option></select>
+  </div>
+  <div id="plan-cont"></div>
+</div>
+
+<!-- CECILIA -->
+<div class="pg" id="pg-cecilia">
+  <div class="topbar"><div><div class="ptitle">Vista supervisión — Cecilia</div><div class="pmeta">Seguimiento del equipo y planes de acción</div></div></div>
+  <div class="mets" id="cec-mets"></div>
+  <div id="cec-plans"></div>
+</div>
+
+<!-- CRM -->
+<div class="pg" id="pg-crm">
+  <div class="topbar">
+    <div><div class="ptitle">Gestión CRM</div><div class="pmeta">Actividades, notas, promesas y seguimiento</div></div>
+    <div style="display:flex;gap:8px">
+      <select id="crm-rf" onchange="renderCRMList()" class="fi" style="font-size:11px;padding:4px 8px"><option value="">Todas las carteras</option></select>
+      <button class="btn-exp" onclick="exportCRM()">📥 Exportar CSV</button>
+    </div>
+  </div>
+  <div class="crm-lay">
+    <div>
+      <div class="card" style="padding:9px;margin-bottom:10px">
+        <input type="text" id="crm-q" class="fi" placeholder="Buscar..." oninput="renderCRMList()" style="width:100%">
+      </div>
+      <div class="card" style="padding:8px"><div class="crm-list" id="crm-list"></div></div>
+    </div>
+    <div id="crm-panel">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:280px;color:var(--text3)">
+        <div style="font-size:30px;margin-bottom:10px">💼</div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:5px">Seleccioná una administración</div>
+        <div style="font-size:12px">Elegí de la lista para ver su historial</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ALERTAS -->
+<div class="pg" id="pg-alertas">
+  <div class="topbar">
+    <div><div class="ptitle">Centro de alertas</div><div class="pmeta">Recordatorios vencidos, promesas y cuentas sin actividad</div></div>
+    <button class="btn-exp" onclick="exportCRM()">📥 Exportar</button>
+  </div>
+  <div id="alertas-cont"></div>
+</div>
+
+<!-- ENVIO MASIVO -->
+<div class="pg" id="pg-envio">
+  <div class="topbar">
+    <div><div class="ptitle">Envío masivo de cuentas corrientes</div><div class="pmeta">Seleccioná las administraciones, verifica los mails y enviá con un click</div></div>
+    <div id="oauth-status-bar"></div>
+  </div>
+  <div id="envio-no-config" style="display:none">
+    <div class="cfg-section" style="text-align:center;padding:32px">
+      <div style="font-size:32px;margin-bottom:10px">⚙️</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">Configuración pendiente</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Antes de enviar necesitás configurar las credenciales de Gmail y Odoo.</div>
+      <button class="btn-p" onclick="goPg('config')">Ir a configuración →</button>
+    </div>
+  </div>
+  <div id="envio-main" style="display:none">
+    <div class="envio-grid">
+      <div class="card" style="padding:0">
+        <div class="envio-filter">
+          <input type="text" id="env-q" placeholder="Buscar administración..." oninput="renderEnvioList()">
+          <select id="env-resp" onchange="renderEnvioList()"><option value="">Todos los responsables</option></select>
+          <select id="env-sem" onchange="renderEnvioList()">
+            <option value="">Todos</option>
+            <option value="rojo">🔴 Críticos</option>
+            <option value="amarillo">🟡 Moderados</option>
+            <option value="verde">🟢 Al día</option>
+          </select>
+        </div>
+        <div class="sel-actions">
+          <button class="btn-s" style="font-size:11px;padding:3px 10px" onclick="selAll(true)">✓ Seleccionar todos</button>
+          <button class="btn-s" style="font-size:11px;padding:3px 10px" onclick="selAll(false)">× Deseleccionar</button>
+          <button class="btn-s" style="font-size:11px;padding:3px 10px" onclick="selSoloSinMail()">⚠ Solo sin mail</button>
+          <span id="sel-count" style="font-size:11px;color:var(--text3);margin-left:auto;align-self:center"></span>
+        </div>
+        <div class="admin-checklist" id="envio-list"></div>
+      </div>
+      <div class="envio-panel">
+        <div class="envio-summary">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px">Resumen de envío</div>
+          <div id="envio-summary-body"><div style="font-size:12px;color:var(--text3)">Seleccioná administraciones de la lista.</div></div>
+          <div id="envio-progress" style="display:none">
+            <div class="progress-envio"><div class="progress-envio-bar" id="envio-pbar" style="width:0%"></div></div>
+            <div style="font-size:11px;color:var(--text3)" id="envio-prog-lbl"></div>
+          </div>
+          <button class="btn-send-all" id="btn-send-all" onclick="startEnvio()" style="margin-top:10px" disabled>
+            🚀 Enviar seleccionados
+          </button>
+        </div>
+        <div class="envio-summary">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px">Opciones de envío</div>
+          <div class="cfg-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+            <label style="min-width:auto"><input type="checkbox" id="opt-adjuntar" style="margin-right:5px">Adjuntar PDFs de facturas desde Odoo</label>
+            <label style="min-width:auto"><input type="checkbox" id="opt-cc" style="margin-right:5px">Enviar copia a mí mismo</label>
+            <label style="min-width:auto"><input type="checkbox" id="opt-registro" checked style="margin-right:5px">Registrar en CRM como actividad</label>
+          </div>
+          <div class="cfg-row" style="margin-top:6px">
+            <label style="min-width:auto;font-size:12px;color:var(--text2)">Asunto personalizado:</label>
+          </div>
+          <div class="cfg-row">
+            <input type="text" id="opt-subject" value="Estado de cuenta de sus consorcios — " placeholder="Asunto del mail">
+          </div>
+        </div>
+        <div class="envio-log" id="envio-log">
+          <div style="font-size:11px;color:var(--text3);text-align:center;padding:12px">El log de envíos aparecerá aquí.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIGURACIÓN -->
+<div class="pg" id="pg-config">
+  <div class="topbar"><div><div class="ptitle">Configuración</div><div class="pmeta">Gmail OAuth + Odoo API</div></div></div>
+
+  <!-- OAUTH MODAL -->
+  <div id="oauth-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border-radius:var(--rl);padding:24px;max-width:540px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">Paso 2 — Pegá la URL de error</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:14px">
+        Cuando Google te redirige a <code style="background:var(--surface2);padding:1px 5px;border-radius:4px">localhost</code> y aparece el error de conexión, 
+        <strong>copiá la URL completa</strong> de la barra de direcciones de ese popup y pegala acá:
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--r);padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:14px;border-left:3px solid var(--amber)">
+        La URL va a parecer algo como:<br>
+        <code style="font-size:10px;word-break:break-all;color:var(--blue)">https://localhost/?code=4/0AXXXXXXXXX&scope=...</code>
+      </div>
+      <textarea id="oauth-url-input" style="width:100%;min-height:80px;font-family:DM Mono,monospace;font-size:11px;padding:9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);outline:none;resize:vertical" placeholder="Pegá la URL completa aquí..."></textarea>
+      <div id="oauth-modal-err" style="font-size:11px;color:var(--red);margin-top:6px;display:none"></div>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+        <button class="btn-s" onclick="closeOAuthModal()">Cancelar</button>
+        <button class="btn-p" onclick="processOAuthUrl()">✓ Procesar código</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-title">📧 Gmail OAuth 2.0 <span id="gmail-status"></span></div>
+    <div class="cfg-row">
+      <label>Client ID (Google)</label>
+      <input type="text" id="cfg-client-id" placeholder="xxxx.apps.googleusercontent.com">
+    </div>
+    <div class="cfg-row">
+      <label>Client Secret</label>
+      <input type="password" id="cfg-client-secret" placeholder="GOCSPX-...">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+      <button class="btn-p" onclick="saveGmailConfig()">Guardar credenciales</button>
+      <button class="btn-s" onclick="startOAuth()">🔐 Paso 1 — Abrir Google</button>
+      <button class="btn-s" onclick="showOAuthModal()">📋 Paso 2 — Pegar URL</button>
+      <button class="btn-s" onclick="revokeOAuth()">Desconectar</button>
+    </div>
+    <div style="margin-top:12px;background:var(--surface2);border-radius:var(--r);padding:12px 14px;font-size:11px;color:var(--text2);line-height:1.8;border-left:3px solid var(--blue)">
+      <strong style="font-size:12px">Cómo autorizar Gmail (2 pasos):</strong><br>
+      <strong>Paso 1:</strong> Click en "Abrir Google" → se abre una ventana de Google → iniciá sesión y aceptá los permisos.<br>
+      <strong>Paso 2:</strong> Google te va a redirigir a <code style="background:var(--surface);padding:1px 4px;border-radius:3px">localhost</code> y vas a ver un error de conexión — eso es normal. 
+      Copiá la URL completa de la barra de direcciones y hacé click en "Pegar URL".<br><br>
+      <strong>Instrucciones para IT:</strong><br>
+      URI de redireccionamiento: <code style="background:var(--surface);padding:1px 5px;border-radius:3px">https://localhost</code> &nbsp;·&nbsp;
+      Scope: <code style="background:var(--surface);padding:1px 5px;border-radius:3px">gmail.send</code> + <code style="background:var(--surface);padding:1px 5px;border-radius:3px">userinfo.email</code>
+    </div>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-title">🔗 Odoo API</div>
+    <div class="cfg-row">
+      <label>URL de Odoo</label>
+      <input type="text" id="cfg-odoo-url" placeholder="https://miempresa.odoo.com">
+    </div>
+    <div class="cfg-row">
+      <label>Base de datos</label>
+      <input type="text" id="cfg-odoo-db" placeholder="nombre_base_datos">
+    </div>
+    <div class="cfg-row">
+      <label>Usuario</label>
+      <input type="text" id="cfg-odoo-user" placeholder="usuario@empresa.com">
+    </div>
+    <div class="cfg-row">
+      <label>API Key</label>
+      <input type="password" id="cfg-odoo-key" placeholder="API key de Odoo">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-p" onclick="saveOdooConfig()">Guardar</button>
+      <button class="btn-s" onclick="testOdoo()">🔍 Probar conexión</button>
+    </div>
+    <div id="odoo-test-result" style="margin-top:8px;font-size:11px"></div>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-title">📋 Mails de clientes</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">
+      Cargá un CSV o Excel con dos columnas: <strong>admin</strong> (nombre de la administración) y <strong>email</strong>. 
+      El sistema hace matching automático con las administraciones del Excel de Odoo.
+    </p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label class="btn-s" style="cursor:pointer">
+        📂 Cargar CSV/Excel de mails
+        <input type="file" id="mails-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="loadMailsFile(this.files[0])">
+      </label>
+      <button class="btn-s" onclick="downloadMailsTemplate()">⬇ Descargar plantilla</button>
+      <span id="mails-load-status" style="font-size:11px;color:var(--text3)"></span>
+    </div>
+    <div id="mails-preview" style="margin-top:12px"></div>
+  </div>
+</div>
+
+</main></div></div>
+
+<script>
+var MAILS_BUILTIN = {
+  'ADMINISTARCION MARIEL BETINA ALIMENTI': 'escobarmilene4@gmail.com',
+  'ADMINISTRACION ABG ADMINISTRACION SRL': 'mamaya@gestionar.com',
+  'ADMINISTRACION AGUIRRE BECCO SANDRA NOEMI': 'adbecco@gmail.com',
+  'ADMINISTRACION ALBALAT': 'proveedores.albalat@gmail.com',
+  'ADMINISTRACION ALBERTO EDGARDO YEBRA': 'admyebra@gmail.com',
+  'ADMINISTRACION ALVAREZ MARCELO MATIAS': 'adm.alvarez2015@gmail.com',
+  'ADMINISTRACION ANDRES BLANCO': 'andresblancoventas@gmail.com',
+  'ADMINISTRACION ANELLO MARTA ELVIRA': 'anellomarta@yahoo.com.ar',
+  'ADMINISTRACION ANTONENA ALEJANDRA CLAUDIA': 'admantonenaperez@gmail.com',
+  'ADMINISTRACION ANTONILLI LORENA': 'antonillilorena.adm@gmail.com',
+  'ADMINISTRACION APAC de CHRISTIAN DARIO SMITH': 'csmithfi@hotmail.com',
+  'ADMINISTRACION ARANDA GLADYS NORMA': 'administracionarandagn@fibertel.com.ar',
+  'ADMINISTRACION ARAOZ': 'proveedores.araoz@gmail.com',
+  'ADMINISTRACION ARCANGELO': 'pablo_arcangelo@hotmail.com',
+  'ADMINISTRACION ARMATA S.R.L.': 'henciso@armatasrl.com.ar',
+  'ADMINISTRACION ARQUI': 'admarqui@live.com',
+  'ADMINISTRACION ARROYO CAROLINA': 'arroyocarolinabroker@gmail.com',
+  'ADMINISTRACION AVAL': 'aldoptacinsky@gmail.com',
+  'ADMINISTRACION AZZOLLINI MARIA CELESTE': 'a.azzollini@yahoo.com',
+  'ADMINISTRACION BARBARICCA MONICA VIVIANA': 'drabarbaricca@hotmail.com',
+  'ADMINISTRACION BARBAROSSA MATIAS ALFREDO': 'adm_barbarossa@yahoo.com',
+  'ADMINISTRACION BEGA FABIAN ALEJANDRO': 'proveedoresadmbega@gmail.com',
+  'ADMINISTRACION BELLOMO JUAN JOSE': 'saavedragestion@yahoo.com',
+  'ADMINISTRACION BENCE': 'administracion@benceyasoc.com.ar',
+  'ADMINISTRACION BETHANCOURT JOSE LUIS': 'proveedores@administracionbetha.com.ar',
+  'ADMINISTRACION BIDEGAIN GUILLERMO PEDRO': 'estudiobidegain@hotmail.com',
+  'ADMINISTRACION BOTANA MARIA EUGENIA': 'botanamariaeugenia@gmail.com',
+  'ADMINISTRACION BRUN DIEGO EZEQUIEL': 'proveedores@administracionbrun.com',
+  'ADMINISTRACION BUENOS AIRES ESTEBAN BOVEDA': 'proveedores@administracionbsas.com.ar',
+  'ADMINISTRACION CAMPOS HAEDO NICOLAS FEDERICO ALEJANDRO': 'nicolas@camposhaedo.com.ar',
+  'ADMINISTRACION CANDELARIA': 'todoparaeladm@hotmail.com',
+  'ADMINISTRACION CANE GONZALO OSVALDO': 'admmaccio@gmail.com',
+  'ADMINISTRACION CARBONELL JORGE OSVALDO': 'consorcio1041@gmail.com',
+  'ADMINISTRACION CAROLINA RODRIGUEZ': 'info@clmestudio.com.ar',
+  'ADMINISTRACION CARTERI MARCELO GUSTAVO': 'afincarconsorcios@gmail.com',
+  'ADMINISTRACION CASAGRANDE ALEJANDRO': 'consorcioscasagrande@gmail.com',
+  'ADMINISTRACION CASTRO FABIANA MARIEL': 'castrofabianaconsorcios@gmail.com',
+  'ADMINISTRACION CASTRO FORGIONE': 'castroforgione@fibertel.com.ar',
+  'ADMINISTRACION CAUVIN MARIANO': 'masoca_administraciones@hotmail.com',
+  'ADMINISTRACION CHAHIN MARCELA ROXANA': 'marcela.chahin@hotmail.com',
+  'ADMINISTRACION CHERÑETZ GRACIELA ALEJANDRA': 'gch.consorcios@yahoo.com',
+  'ADMINISTRACION CILLI RUBEN': 'cilliadm@gmail.com',
+  'ADMINISTRACION CIMINARI DEBORTOLI ALEJANDRO ALBERTO': 'estudiociminari@gmail.com',
+  'ADMINISTRACION CLAUDIA CLAUSS': 'estudio.clauss@gmail.com',
+  'ADMINISTRACION CODA CARLOS ALBERTO': 'admmaco@hotmail.com',
+  'ADMINISTRACION COLOMBO GASTON CARLOS': 'admtonelero6166@gmail.com',
+  'ADMINISTRACION COMBA Y ASOCIADOS S.R.L.': 'proveedores@administracioncomba.com.ar',
+  'ADMINISTRACION CONINT de PANOSSIAN VARGAS': 'lolipanossian@gmail.com',
+  'ADMINISTRACION CORAL DE MARCELO ALVAREZ': 'marceloalvarez350@hotmail.com',
+  'ADMINISTRACION COSENTINO': 'reclamos@admcosentino.com.ar',
+  'ADMINISTRACION COSTA': 'admmonicarios@gmail.com',
+  'ADMINISTRACION COVIELLO GABRIELA NILDA': 'adm.coviello@hotmail.com',
+  'ADMINISTRACION CYGBA de SUSANA CANTALEJO': 'dataentry@cygba.com.ar',
+  'ADMINISTRACION D ANGELO JULIETA': 'admdangelo@gmail.com',
+  'ADMINISTRACION DANIELA LORENZO': 'danielalorenzo@hotmail.com',
+  'ADMINISTRACION DB&T de TRAVETTO FERNANDO': 'fertravetto@yahoo.com.ar',
+  'ADMINISTRACION DBC': 'proveedores@administraciondbc.com.ar',
+  'ADMINISTRACION DE CONSORCIOS PROLIGIA': 'proligia.adm@gmail.com',
+  'ADMINISTRACION DE PAOLA ALDANA LUCILA': 'gestionactiva.contacto@gmail.com',
+  'ADMINISTRACION DEL SUR de Pedro Capobianco': 'proveedores@admdelsurconsorcios.com.ar',
+  'ADMINISTRACION DELGADO RAFAEL': 'adm.delgadoolivieri@gmail.com',
+  'ADMINISTRACION DI DONATO VICENTE': 'didonatovicente@gmail.com',
+  'ADMINISTRACION DI GISI': 'adm.consorciosdigisi@gmail.com',
+  'ADMINISTRACION DI LORENZO PABLO VICENTE': 'admdilorenzo@gmail.com',
+  'ADMINISTRACION DIEGO MARTIN LOPEZ': 'dyd.consorcio@gmail.com',
+  'ADMINISTRACION DOJAS MARCELO ALEJANDRO': 'mard2608@gmail.com',
+  'ADMINISTRACION DOMUM': 'irina.domum@gmail.com',
+  'ADMINISTRACION EMILIANO BENITEZ': 'emilianobenitez@hotmail.es',
+  'ADMINISTRACION ESTEBAN & LEPERA': 'administracion@estebanabogados.com.ar',
+  'ADMINISTRACION ESTUDIO DIEGO E MARTIN & ASOCIADOS': 'adm.diegomartinfacturas@gmail.com',
+  'ADMINISTRACION ESTUDIO FIM': 'info@estudiofim.com.ar',
+  'ADMINISTRACION ESTUDIO MBM DE MARCELA MENONI': 'estudiombm@hotmail.com',
+  'ADMINISTRACION FACUNDO MATIAS ROMAGNOLI': 'admroma24@gmail.com',
+  'ADMINISTRACION FALVINO': 'proveedoresfalvino@hotmail.com',
+  'ADMINISTRACION FAVRE ALICIA BEATRIZ': 'admiconsorciosaf@gmail.com',
+  'ADMINISTRACION FERAZZOLI PRACK': 'fp.gestiondeconsorcios@gmail.com',
+  'ADMINISTRACION FERAZZOLI VERONICA MARISA': 'consorcios.vf@gmail.com',
+  'ADMINISTRACION FERNANDEZ FLORENCIA MARIA': 'florenciamariafernandez84@gmail.com',
+  'ADMINISTRACION FERNANDEZ MARIA ELENA': 'mariaelfernandez@gmail.com',
+  'ADMINISTRACION FERNANDO ARBESU': 'consultas@arbesuyfernandez.com.ar',
+  'ADMINISTRACION FERRE MARIA LAURA': 'm.laura.ferre@gmail.com',
+  'ADMINISTRACION FERRUFINO GLADYS EVANGELINA': 'admagueros2018@gmail.com',
+  'ADMINISTRACION FIGUEROA': 'yanina.figueroa.consorcios@gmail.com',
+  'ADMINISTRACION FISZER YOEL': 'admfiszer@gmail.com',
+  'ADMINISTRACION FITTIPALDI HECTOR ALBERTO': 'proveedores@hfittipaldi.com.ar',
+  'ADMINISTRACION FLORENCIA ROLDAN': 'adm.florenciaroldan@gmail.com',
+  'ADMINISTRACION FLUGIGNER CLAUDIA ALEJANDRA': 'admflugigner@hotmail.com',
+  'ADMINISTRACION FRAGAPANE MIRTA LILIANA': 'lilifragapane15@gmail.com',
+  'ADMINISTRACION FRANCISCO RICARDO DE CARLO VIGNOLO': 'panchodecarlo@gmail.com',
+  'ADMINISTRACION FRANCO QUARANTA ( EX TAMOLA)': 'f.quaranta.96@gmail.com',
+  'ADMINISTRACION FURIO ENRIQUE DARIO': 'facturacion@e-furio.com',
+  'ADMINISTRACION FURNARI FERNANDA CECILIA': 'fcfurnari@hotmail.com',
+  'ADMINISTRACION GABRIEL GOMEZ': 'admggba@gmail.com',
+  'ADMINISTRACION GADALETA': 'p.r.gadaleta@gmail.com',
+  'ADMINISTRACION GALAN CLAUDIA MERCEDES': 'galanclaudia@yahoo.com.ar',
+  'ADMINISTRACION GALLO HAYDEE GRACIA': 'haydegallo@hotmail.com',
+  'ADMINISTRACION GARCIA ROXANA VALERIA': 'admrvgarcia@gmail.com',
+  'ADMINISTRACION GASTALDI VIOLETA AMANDA MARGARITA': 'ad.consorcios.vg@gmail.com',
+  'ADMINISTRACION GERENCIAMOS CONSORCIOS': 'gerenciamos.consorcios@gmail.com',
+  'ADMINISTRACION GESTION EN PROPIEDADES S.R.L': 'proveedoresgep@gmail.com',
+  'ADMINISTRACION GIANOTTI AUGUSTO HERNAN': 'proveedores@estudiogtt.com.ar',
+  'ADMINISTRACION GIUSSANI DIEGO ANDRES': 'proveedores@estudiogiussani.com.ar',
+  'ADMINISTRACION GOLFETTO': 'administraciongolfetto@gmail.com',
+  'ADMINISTRACION GOMEZ VIDAL S.A.': 'facturacion@agvsa.com.ar',
+  'ADMINISTRACION GORE OSVALDO ERNESTO': 'admvoltawa@gmail.com',
+  'ADMINISTRACION GRAZIADEI DIEGO MARCOS': 'facturas@admgraziadei.com.ar',
+  'ADMINISTRACION GRETI AZIZ': 'greti@gretiaziz.com',
+  'ADMINISTRACION GRUPO ACJ de GARRERA CHRISTIAN': 'grupoacj2016@gmail.com',
+  'ADMINISTRACION GRUPO URBANA de Gisela Juarez': 'grupourbana.adm@gmail.com',
+  'ADMINISTRACION GUERRA MARIA LORENA': 'marialorenaguerr2014@gmail.com',
+  'ADMINISTRACION GUIDO RUIZ': 'admconsorcios.gr@gmail.com',
+  'ADMINISTRACION GUTIERREZ EGUIA': 'proveedoresige@gmail.com',
+  'ADMINISTRACION HABIBO CLAUDIA FABIANA GRACIELA': 'gracielahabibo@hotmail.com',
+  'ADMINISTRACION HECTOR JOSE LEVALLE': 'admlevalle@hotmail.com',
+  'ADMINISTRACION HERNAN JOSE ROCHA': 'facturas@administracionrochas.com',
+  'ADMINISTRACION HERNANDEZ ELIZALDE AGUSTIN': 'admipyp@gmail.com',
+  'ADMINISTRACION HERRERA FRANCISCO CLEMENTE': 'admi.consherrera@gmail.com',
+  'ADMINISTRACION ISKANDAR YEDID MARTA SUSANA': 'susanayedid@gmail.com',
+  'ADMINISTRACION ITALIA LARA': 'malaraadm3@gmail.com',
+  'ADMINISTRACION JAIMEZ PAULA RAQUEL': 'admjaimez@gmail.com',
+  'ADMINISTRACION JMC': 'consorciosjmc@yahoo.com.ar',
+  'ADMINISTRACION JORGE FERNANDEZ LOYARTE': 'proveedores@jfernandezloyarte.com',
+  'ADMINISTRACION JOSE LUIS AGOSTI': 'adminagosti@fibertel.com.ar',
+  'ADMINISTRACION JUAN CARLOS GAGO': 'admconsorciosgago@gmail.com',
+  'ADMINISTRACION JULIO ARIEL FERNANDEZ': 'info@julioarielfernandez.com.ar',
+  'ADMINISTRACION KARINA NIGLIA': 'karina@aknestudio.com',
+  'ADMINISTRACION KIMUN': 'kimun.consorcios@gmail.com',
+  'ADMINISTRACION KOGAN SANDRA MARISA': 'sandra.m.kogan@gmail.com',
+  'ADMINISTRACION KRENZ RICARDO SANTIAGO': 'adm.krenz@gmail.com',
+  'ADMINISTRACION L & M de Mario Gombach': 'mariogombach@gmail.com',
+  'ADMINISTRACION LACUNZA MARCELA ALEJANDRA': 'lacunza.adm@gmail.com',
+  'ADMINISTRACION LAM CONSORCIOS': 'lamconsorcios@hotmail.com',
+  'ADMINISTRACION LAURA GARCIA': 'adm.cons.lgarcia@gmail.com',
+  'ADMINISTRACION LAURA PELLIZA': 'proveedores@sirius-se.com.ar',
+  'ADMINISTRACION LEIVA VERONICA NORMA ELIZABETH': 'consorciopujol940@gmail.com',
+  'ADMINISTRACION LEON AGUSTIN RAMIRO': 'agustinleonadm@gmail.com',
+  'ADMINISTRACION LEONOR MARIA CARDOSO': 'la_dama_del_lago@hotmail.com',
+  'ADMINISTRACION LEVI LEON': 'levileon@hotmail.com',
+  'ADMINISTRACION LINK ALAN KEVIN': 'proveedores@adminlinkauf.com.ar',
+  'ADMINISTRACION LLEBARA CARLOS ALBERTO': 'alberto.llebara@hospitalitaliano.org.ar',
+  'ADMINISTRACION LOPEZ FERRERE CAROLINA FERNANDA': 'clopezferrere@hotmail.com',
+  'ADMINISTRACION LOPEZ LACUARA FERNANDO JAVIER': 'dr.lacuara@gmail.com',
+  'ADMINISTRACION LOS LIRIOS': 'info@loslirios.group',
+  'ADMINISTRACION LOZANO': 'admlozano@yahoo.com.ar',
+  'ADMINISTRACION MACRI SILVIA': 'silviammacri@gmail.com',
+  'ADMINISTRACION MAGNANI': 'facturacion.adm.magnani@gmail.com',
+  'ADMINISTRACION MALPELI Y SUMMA S.H.': 'malpelisummaproveedores@gmail.com',
+  'ADMINISTRACION MANES MARZANO': 'nicolas@manesmarzano.com.ar; pagos@manesmarzano.com.ar',
+  'ADMINISTRACION MANUS PROPIEDADES de SCHVARZMAN MANUEL': 'manusprop341@gmail.com',
+  'ADMINISTRACION MARAIA PABLO ANTONIO': 'pablomaraia@gmail.com',
+  'ADMINISTRACION MARCELA ALEJANDRA FERRO': 'administracion.ferro@gmail.com',
+  'ADMINISTRACION MARIA ANGELICA LAZARTE MENENDEZ': 'maria.adm.lazarte@gmail.com',
+  'ADMINISTRACION MARIANA IGLESIAS': 'adm.consorcios.mig@gmail.com',
+  'ADMINISTRACION MARIANO REISSIAN': 'consorcio3152@gmail.com',
+  'ADMINISTRACION MARTA AVALOS': 'admmartaavalos@gmail.com',
+  'ADMINISTRACION MARTA TRIPODI': 'martatripodi245@gmail.com',
+  'ADMINISTRACION MATIAS SCIURANO': 'consorcios@grupobaro.com.ar',
+  'ADMINISTRACION MAZZUCCO GRISELDA': 'admconsorcio_gmazzucco@yahoo.com.ar',
+  'ADMINISTRACION MENDEZ JUAN CARLOS': 'ad.jcmendez@gmail.com',
+  'ADMINISTRACION MICAELA LIS SALGADO': 'micaelasalgadoadm@gmail.com',
+  'ADMINISTRACION MIRTA CHELOTTI': 'mirtachelotti@yahoo.com.ar',
+  'ADMINISTRACION MIRTA FELDMAN': 'jcmaco@fibertel.com.ar',
+  'ADMINISTRACION MIRTA G LEANZA': 'dramirtagleanza@yahoo.com.ar',
+  'ADMINISTRACION MIRTA VAZQUEZ': 'info@administracionvazquez.com',
+  'ADMINISTRACION MONDRIA FEDERICO': 'proveedores@estudiobuenosaires.ar',
+  'ADMINISTRACION MONICA ALI-NVA': 'monivali1960@gmail.com',
+  'ADMINISTRACION MONICA CARCAMO': 'monilili0301@gmail.com',
+  'ADMINISTRACION MONTI JUAN EDUARDO': 'adm.jemonti@gmail.com',
+  'ADMINISTRACION MORINIGO RAMONA NATALIA': 'contacto.admmorinigo@gmail.com',
+  'ADMINISTRACION MOYA MARÍA FERNANDA': 'admfernandamoya@hotmail.com',
+  'ADMINISTRACION MURILLO Y ASOCIADOS': 'hugo.r.murillo@gmail.com',
+  'ADMINISTRACION MUÑOZ MARIANO MARCELO': 'admconsorcios.mm@gmail.com',
+  'ADMINISTRACION NAVEILHAN HORACIO': 'hnaveilhan@gmail.com',
+  'ADMINISTRACION NILDA NATYNCZYK': 'nildanaty@hotmail.com',
+  'ADMINISTRACION NORTE': 'eugenioadmnorte@gmail.com',
+  'ADMINISTRACION NOURRY CARLOS': 'nourrycarlos@hotmail.com',
+  'ADMINISTRACION NUEVA GENERACION': 'admnuevageneracion@gmail.com',
+  'ADMINISTRACION OTALVARES': 'adm.otalvares@gmail.com',
+  'ADMINISTRACION OTSY': 'adm.otsy@gmail.com',
+  'ADMINISTRACION PABLO ANDRES MUIR': 'pabloandresmuir@gmail.com',
+  'ADMINISTRACION PAPA SEBASTIAN ANTONIO': 'admconsorciopapa@gmail.com',
+  'ADMINISTRACION PARES LUCIANA IANINA': 'consorciospares@gmail.com',
+  'ADMINISTRACION PASCUAL ANTONIO RAULINO': 'drantoniopascual@gmail.com',
+  'ADMINISTRACION PELLEJERO HERRERO MIGUEL DANIEL': 'dpellejero@hotmail.com',
+  'ADMINISTRACION PERALTA MARIA ISABEL': 'miperalta27@gmail.com',
+  'ADMINISTRACION PEREYRA CLAUDIA MONICA': 'claudiamadm@gmail.com',
+  'ADMINISTRACION PEREZ MARIELA': 'admmarielaperez@gmail.com',
+  'ADMINISTRACION PETRONI NICOLAS IGNACIO': 'mfmartinez@mfmestudio.com.ar',
+  'ADMINISTRACION PLATEL GONZALO MIQUEAS': 'admipla@outlook.com',
+  'ADMINISTRACION POBLETE FRACASSI HUMBERTO RICARDO ARTURO': 'rica7_2@hotmail.com',
+  'ADMINISTRACION POL MARIANO': 'proveedores@administracionpol.com.ar',
+  'ADMINISTRACION PONCE LUCIANA NATALIA': 'estudiojuridicoponcegiuzio@gmail.com',
+  'ADMINISTRACION PUSTERLA': 'adm.pusterla@gmail.com',
+  'ADMINISTRACION RAMOS JAVIER OSCAR': 'proveedores@adminjramos.com',
+  'ADMINISTRACION RAUL MIRANDA de LKM': 'infoestudiolkm@gmail.com',
+  'ADMINISTRACION REDENSKY EDUARDO ANGEL': 'oesteproveedores@gmail.com',
+  'ADMINISTRACION REDOTE ARIEL ALEJANDRO': 'redotedificios@hotmail.com',
+  'ADMINISTRACION REGUERA': 'facturacion@administracionreguera.com.ar',
+  'ADMINISTRACION RIVERA PALOMINO RINA LISSETT': 'consorciosrivera@gmail.com',
+  'ADMINISTRACION RIZZI': 'proveedores.rizzi@gmail.com',
+  'ADMINISTRACION ROJAS EVELINA MIRNA': 'facturacion@quirogarojas.com.ar',
+  'ADMINISTRACION ROJAS FERIA MARIA ANGELICA': 'mangerofe@gmail.com',
+  'ADMINISTRACION ROLDAN ALEJANDRA ANA': 'cordobalife@gmail.com',
+  'ADMINISTRACION ROLDAN FRANCISCO Y YOST MARTIN': 'admroldan@hotmail.com',
+  'ADMINISTRACION ROLE de Leonardo Frascara': 'admfrascara@hotmail.com',
+  'ADMINISTRACION ROMERO CARLOS DANIEL': 'ar.adm.consorcios@gmail.com',
+  'ADMINISTRACION ROMINA EMILSE STELLATO': 'adm.aguirrestellato@outlook.com',
+  'ADMINISTRACION RONCORONI Y DA COSTA': 'eduroncoroni@hotmail.com',
+  'ADMINISTRACION ROSSO GABRIELA ROXANA': 'gabyross@yahoo.com',
+  'ADMINISTRACION RUIZ S.R.L': 'proveedores@administracionruiz.com.ar',
+  'ADMINISTRACION RUIZ SANT JORGE MARIA': 'jmruizsant@gmail.com',
+  'ADMINISTRACION SADI INMOBILIARIA S.A': 'proveedores@sadiinmobiliaria.com.ar',
+  'ADMINISTRACION SAGRERA': 'fsagrera.adm@gmail.com',
+  'ADMINISTRACION SAINT-GENEZ MARCELO ALBERTO': 'nilda@acs-abogados.com.ar',
+  'ADMINISTRACION SALANDARI SANDRA MARCELA': 'sandrasalandari@ymail.com',
+  'ADMINISTRACION SALERNO ROSALINA': 'rosalinasalerno@gmail.com',
+  'ADMINISTRACION SALVATIERRA MERNIES ATILIO SAUL': 'atiliosalvatierra@gmail.com',
+  'ADMINISTRACION SAN JUAN': 'proveedores@admsanjuan.com.ar',
+  'ADMINISTRACION SANCHEZ BADENAS JUAN RODRIGO': 'juan@sanchezbadenas.com',
+  'ADMINISTRACION SCARLATA BERNARDO': 'admcrece@gmail.com',
+  'ADMINISTRACION SCHMAHL': 'info@admsch.com.ar',
+  'ADMINISTRACION SEI (SUR ESTUDIO INTEGRAL)': 'surestudiointegral@hotmail.com',
+  'ADMINISTRACION SERRANO BIENES RAICES': 'manuelserrano2930@gmail.com',
+  'ADMINISTRACION SIGIMBOSCO MARTIN': 'admsigimbosco@hotmail.com',
+  'ADMINISTRACION SILVIA GILDA VIEGAS': 'silviagviegas@yahoo.com.ar',
+  'ADMINISTRACION SILVINA ANDREA DARANNO': 'daranno@gmail.com',
+  'ADMINISTRACION SMART': 'adm.smart.2765@gmail.com',
+  'ADMINISTRACION SML': 'sandramineo9@gmail.com',
+  'ADMINISTRACION SOL de JORGE ASSOF': 'proveedores@soladministracion.com.ar',
+  'ADMINISTRACION SOSA NILDA BEATRIZ': 'nsyasociados.proveedores@gmail.com',
+  'ADMINISTRACION SOTO MARIA ESTHER': 'sotomariaesther@yahoo.com.ar',
+  'ADMINISTRACION SOUTO MARINA CELESTE': 'admestudiosouto@gmail.com',
+  'ADMINISTRACION SOUTO de Hector Souto': 'drasedes@yahoo.com.ar',
+  'ADMINISTRACION SOZZANI ANA MARIA': 'amsproveedores@hotmail.com',
+  'ADMINISTRACION SPADARO PAULA NANCY': 'paulaspadaro@yahoo.com.ar',
+  'ADMINISTRACION SPARVOLI': 'elsasparvoli@gmail.com',
+  'ADMINISTRACION SPERONI MARIANO': 'admisperoni@gmail.com',
+  'ADMINISTRACION TERESA ROMANO': 'contablegep@gmail.com',
+  'ADMINISTRACION TOMASSI ALBERTO': 'adm.unobe@hotmail.com.ar',
+  'ADMINISTRACION TORRE MITRE': 'consorciosgatti@hotmail.com',
+  'ADMINISTRACION TORRES CARBONELL': 'adm_torrescarbonell@yahoo.com.ar',
+  'ADMINISTRACION TRICANICO LESCUME MARCELO WILSON': 'martriles@hotmail.com',
+  'ADMINISTRACION TRIPOLONI MACARENA': 'admtripoloniprop@gmail.com',
+  'ADMINISTRACION URBANA': 'urbanaadm@yahoo.com.ar',
+  'ADMINISTRACION UREÑA MARIA LEONOR': 'leo.ure71@gmail.com',
+  'ADMINISTRACION VALIERO- SCHETTINI': 'diegovaliero@gmail.com',
+  'ADMINISTRACION VALLE NORMA BEATRIZ': 'admnormavalle@gmail.com',
+  'ADMINISTRACION VALORES CONSORCIOS (DE FABIANA MAURI)': 'valoresconsorcios@gmail.com',
+  'ADMINISTRACION VAZQUEZ CHRISTIAN MARCELO': 'consorcioscvtri@gmail.com',
+  'ADMINISTRACION VERA PEUKER': 'info.verapeuker@gmail.com',
+  'ADMINISTRACION VERCESI PAOLA': 'estudiovercesi@gmail.com',
+  'ADMINISTRACION VERONICA ANDREA BELUCCI': 'proveedoresbelucci@gmail.com',
+  'ADMINISTRACION VERONICA SILVA GOMEZ': 'consorciomadero121@gmail.com',
+  'ADMINISTRACION VILARIÑO BALZATEGUI': 'info@consorciosadministracion.com',
+  'ADMINISTRACION VILCHE PIAN JACOBO LUCAS': 'jacobo@vpadministracion.com',
+  'ADMINISTRACION VILLALBA WALTER ANDRES': 'waltervillalba@madisson.com.ar',
+  'ADMINISTRACION VITTOLA KARIN VANINA': 'karinvittola@gmail.com',
+  'ADMINISTRACION WAM': 'admwamm@gmail.com',
+  'ADMINISTRACION WOSLAWSKI PAULA BERTA ELISET': 'pw.adconsorcios@gmail.com',
+  'ADMINISTRACION YACOPINO': 'administracionyacopino@hotmail.com',
+  'ADMINISTRACION YEANNES': 'admyeannes@gmail.com',
+  'ADMINISTRACION ZAMBRANO SANDRA SILVANA': 'szambrano64@hotmail.com',
+  'ADMINISTRACION ZELI': 'admizeli2@gmail.com',
+  'ADMINISTRACION ZUCOTTI ALEJANDRO ADRIAN': 'estudiozucotti@fibertel.com.ar',
+  'ADMINISTRACION de consorcio HyA de ARGUELLO': 'adolfo@administraciondeconsorciosha.com.ar',
+  'BALKO ARGENTINA ADMINISTRACIONES Y MANDATOS SA': 'felix.sileo@baamsa.bz'
+};
+
+var PHONES_BUILTIN = {}; // Populated from Odoo res.partner when CORS resolves
+
+
+
+
+// ═══════════════════════════════════════
+// GLOBALS
+// ═══════════════════════════════════════
+var DATA = [];
+var planSt = {};
+var sortSt = { ag: { col:'dias', dir:-1 }, f: { col:'dias', dir:-1 } };
+var fPage = 1, fRows = [];
+var crmAdmin = null, crmTab = 'actividades';
+var ccAdminKey = '', mailAdminKey = '';
+var PS = 25;
+var TODAY = new Date();
+var TODAY_S = TODAY.toLocaleDateString('es-AR');
+
+var BKDEFS = [
+  { k:'1-30',  lbl:'1–30 días',  cls:'bk0', color:'#EF9F27' },
+  { k:'31-60', lbl:'31–60 días', cls:'bk1', color:'#D85A30' },
+  { k:'61-90', lbl:'61–90 días', cls:'bk2', color:'#C0392B' },
+  { k:'91-120',lbl:'91–120 días',cls:'bk3', color:'#8b1a1a' },
+  { k:'+120',  lbl:'+120 días',  cls:'bk4', color:'#5a2d82' },
+];
+
+var ACT = {
+  llamado:  { icon:'📞', lbl:'Llamado' },
+  mail:     { icon:'✉️', lbl:'Mail' },
+  whatsapp: { icon:'💬', lbl:'WhatsApp' },
+  reunion:  { icon:'🤝', lbl:'Reunión' },
+  nota:     { icon:'📝', lbl:'Nota interna' },
+  pago:     { icon:'💰', lbl:'Pago recibido' },
+};
+
+var RESS = [
+  { v:'positivo', lbl:'Positivo — comprometió pago',   cls:'tr-pos' },
+  { v:'neutro',   lbl:'Neutro — sin compromiso',        cls:'tr-neu' },
+  { v:'negativo', lbl:'Negativo — rechazó / no atendió',cls:'tr-neg' },
+  { v:'pago',     lbl:'Confirmó pago realizado',        cls:'tr-pago' },
+];
+
+// ═══════════════════════════════════════
+// FILE LOAD
+// ═══════════════════════════════════════
+function loadFile(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var raw = XLSX.utils.sheet_to_json(ws, { raw:false, defval:'' });
+      DATA = parseRows(raw);
+      if (!DATA.length) { alert('No se encontraron datos válidos.'); return; }
+      onLoaded(file.name);
+    } catch(err) {
+      alert('Error al leer el archivo: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseRows(raw) {
+  var C = {
+    estado:'Estado en pago',
+    fechaFact:'Fecha de factura',
+    fechaVenc:'Fecha de vencimiento',
+    pendiente:'Importe pendiente firmado',
+    cliente:'Nombre del contacto a mostrar en la factura',
+    num:'Número',
+    total:'Total en moneda firmado',
+    vend:'Vendedor',
+    prod:'Líneas de factura/Categoría de producto/Nombre completo',
+    resp:'Abrir Líneas/Responsable de Cobranza/Contacto relacionado',
+  };
+
+  // Map admin groups
+  var adminMap = {};
+  var curAdmin = '';
+  for (var i = 0; i < raw.length; i++) {
+    var est = (raw[i][C.estado] || '').toString().trim();
+    if (est.toUpperCase().indexOf('ADMINISTRACION') >= 0) {
+      curAdmin = est;
+    } else if (raw[i][C.num] && raw[i][C.num].toString().trim()) {
+      adminMap[i] = curAdmin;
+    }
+  }
+
+  var results = [];
+  for (var i = 0; i < raw.length; i++) {
+    var row = raw[i];
+    var num = (row[C.num] || '').toString().trim();
+    if (!num) continue;
+
+    var estado = (row[C.estado] || '').toString().trim();
+    var totalV = parseFloat((row[C.total] || '0').toString().replace(/[^0-9.-]/g,'')) || 0;
+    var pendV  = parseFloat((row[C.pendiente] || '0').toString().replace(/[^0-9.-]/g,'')) || 0;
+    var saldo  = (estado === 'En proceso de pago') ? totalV : pendV;
+
+    var prod = (row[C.prod] || '').toString().trim();
+    if (prod.indexOf('All / ') === 0) prod = prod.slice(6);
+    var isConsorcio = /consorcio en regla/i.test(prod);
+
+    // Parse fecha factura
+    var factStr = (row[C.fechaFact] || '').toString().trim();
+    var factDate = parseDate(factStr);
+
+    // Calcular vencimiento
+    var vencDate = null;
+    var vencStr = '';
+    if (isConsorcio) {
+      var rawVenc = (row[C.fechaVenc] || '').toString().trim();
+      vencDate = parseDate(rawVenc);
+      vencStr = vencDate ? fmtDate(vencDate) : rawVenc;
+    } else {
+      if (factDate) {
+        vencDate = new Date(factDate.getTime());
+        vencDate.setDate(vencDate.getDate() + 30);
+        vencStr = fmtDate(vencDate);
+      }
+    }
+
+    var dias = 0;
+    if (vencDate) {
+      dias = Math.max(0, Math.floor((TODAY - vencDate) / 86400000));
+    }
+
+    var bucket = dias === 0 ? 'Al dia' :
+                 dias <= 30 ? '1-30' :
+                 dias <= 60 ? '31-60' :
+                 dias <= 90 ? '61-90' :
+                 dias <= 120 ? '91-120' : '+120';
+
+    results.push({
+      estado: estado,
+      num: num,
+      fechaFact: factDate ? fmtDate(factDate) : factStr,
+      fechaVenc: vencStr,
+      cliente: (row[C.cliente] || '').toString().trim(),
+      total: totalV,
+      saldo: saldo,
+      dias: dias,
+      bucket: bucket,
+      vendedor: (row[C.vend] || 'Sin asignar').toString().trim() || 'Sin asignar',
+      respCobranza: (row[C.resp] || 'Sin asignar').toString().trim() || 'Sin asignar',
+      producto: prod || 'Sin categoría',
+      admin: adminMap[i] || 'Sin administración',
+    });
+  }
+  return results;
+}
+
+function parseDate(s) {
+  if (!s) return null;
+  s = s.toString().trim();
+  if (s.indexOf('/') >= 0) {
+    var p = s.split('/');
+    if (p.length === 3) {
+      var d = new Date(+p[2], +p[1]-1, +p[0]);
+      return isNaN(d) ? null : d;
+    }
+  }
+  var d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  var dd = String(d.getDate()).padStart(2,'0');
+  var mm = String(d.getMonth()+1).padStart(2,'0');
+  return dd+'/'+mm+'/'+d.getFullYear();
+}
+
+function onLoaded(fname) {
+  document.getElementById('up').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  var st = document.getElementById('dstatus');
+  st.textContent = DATA.length + ' registros · ' + fname;
+  st.classList.add('ok');
+  try { planSt = JSON.parse(localStorage.getItem('planSt') || '{}'); } catch(e) { planSt = {}; }
+  buildFilters();
+  buildCombos();
+  renderResumen();
+  goPg('resumen');
+  setTimeout(updateAlertBadge, 200);
+}
+
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function fmt(v) { return '$' + Math.round(v).toLocaleString('es-AR'); }
+function pct(a, b) { return b ? Math.round(a/b*100) : 0; }
+
+function shortAdmin(s) {
+  return s.replace(/^ADMINISTRACION\s*/i,'').replace(/\s*\(\d+\)\s*$/,'').trim();
+}
+
+function semColor(d) { return d > 60 ? 'rojo' : d > 30 ? 'amarillo' : 'verde'; }
+function semHex(c) { return c==='rojo' ? '#C0392B' : c==='amarillo' ? '#b8680a' : '#1a7a4a'; }
+function semLbl(c) { return c==='rojo' ? 'Mora crítica' : c==='amarillo' ? 'Mora moderada' : 'Al día'; }
+
+function bdg(estado) {
+  if (estado === 'Sin pagar') return '<span class="bdg bdr">Sin pagar</span>';
+  if (estado === 'En proceso de pago') return '<span class="bdg bda">En proceso</span>';
+  return '<span class="bdg" style="background:var(--green-bg);color:var(--green)">'+estado+'</span>';
+}
+function bbdg(b) {
+  var cls = b==='+120' ? 'background:var(--purple-bg);color:var(--purple)' :
+            b==='91-120'||b==='61-90' ? 'background:var(--red-bg);color:var(--red)' :
+            b==='31-60' ? 'background:var(--amber-bg);color:var(--amber)' :
+            'background:var(--surface2);color:var(--text2)';
+  return '<span class="bdg" style="'+cls+'">'+b+'d</span>';
+}
+function dcol(d) {
+  return d>90 ? 'color:var(--purple)' : d>60 ? 'color:var(--red)' : d>30 ? 'color:var(--amber)' : '';
+}
+
+function getAdmins() {
+  var map = {};
+  DATA.forEach(function(r) {
+    var k = r.admin;
+    if (!map[k]) map[k] = { nombre:k, short:shortAdmin(k), saldo:0, total:0, count:0, maxDias:0, rows:[], vends:[], resps:[], prods:[], buckets:{} };
+    map[k].saldo += r.saldo; map[k].total += r.total; map[k].count++;
+    if (r.dias > map[k].maxDias) map[k].maxDias = r.dias;
+    map[k].rows.push(r);
+    if (map[k].vends.indexOf(r.vendedor)<0) map[k].vends.push(r.vendedor);
+    if (map[k].resps.indexOf(r.respCobranza)<0) map[k].resps.push(r.respCobranza);
+    if (map[k].prods.indexOf(r.producto)<0) map[k].prods.push(r.producto);
+    map[k].buckets[r.bucket] = (map[k].buckets[r.bucket]||0) + r.saldo;
+  });
+  return Object.values(map).sort(function(a,b){return b.saldo-a.saldo;});
+}
+
+function getResps() {
+  var map = {};
+  DATA.forEach(function(r) {
+    var k = r.respCobranza;
+    if (!map[k]) map[k] = { nombre:k, saldo:0, count:0, crit:0, admins:[], vends:[], rows:[], buckets:{} };
+    map[k].saldo += r.saldo; map[k].count++;
+    if (r.dias > 60) map[k].crit += r.saldo;
+    if (map[k].admins.indexOf(r.admin)<0) map[k].admins.push(r.admin);
+    if (map[k].vends.indexOf(r.vendedor)<0) map[k].vends.push(r.vendedor);
+    map[k].rows.push(r);
+    map[k].buckets[r.bucket] = (map[k].buckets[r.bucket]||0) + r.saldo;
+  });
+  return Object.values(map).sort(function(a,b){return b.saldo-a.saldo;});
+}
+
+function bkSum(key) { return DATA.filter(function(r){return r.bucket===key;}).reduce(function(s,r){return s+r.saldo;},0); }
+function bkCnt(key) { return DATA.filter(function(r){return r.bucket===key;}).length; }
+
+// ═══════════════════════════════════════
+// FILTERS & COMBOS
+// ═══════════════════════════════════════
+function buildFilters() {
+  var resps = [];
+  DATA.forEach(function(r){ if(resps.indexOf(r.respCobranza)<0) resps.push(r.respCobranza); });
+  resps.sort();
+  var admins = getAdmins();
+
+  ['ag-resp','fr','rd-sel','plan-sel','crm-rf'].forEach(function(id) {
+    var el = document.getElementById(id); if(!el) return;
+    while(el.options.length > 1) el.remove(1);
+    resps.forEach(function(r){ var o=document.createElement('option'); o.value=r; o.textContent=r; el.appendChild(o); });
+  });
+  ['ag-adm','fa'].forEach(function(id) {
+    var el = document.getElementById(id); if(!el) return;
+    while(el.options.length > 1) el.remove(1);
+    admins.forEach(function(a){ var o=document.createElement('option'); o.value=a.nombre; o.textContent=a.short; el.appendChild(o); });
+  });
+}
+
+function buildCombos() {
+  var admins = getAdmins();
+  mkCombo('combo-cc', admins, function(val){ ccAdminKey=val; renderCC(); });
+  mkCombo('combo-mail', admins, function(val){ mailAdminKey=val; renderMail(); });
+}
+
+function mkCombo(containerId, admins, onSel) {
+  var wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  wrap.innerHTML =
+    '<div class="combo-iw">' +
+    '<input class="combo-in" type="text" placeholder="Escribir para buscar administración..." autocomplete="off" id="'+containerId+'-in">' +
+    '<button class="combo-x" id="'+containerId+'-x">×</button>' +
+    '</div>' +
+    '<div class="combo-drop" id="'+containerId+'-drop"></div>';
+
+  var inp = document.getElementById(containerId+'-in');
+  var drop = document.getElementById(containerId+'-drop');
+  var xbtn = document.getElementById(containerId+'-x');
+
+  function render(q) {
+    q = (q||'').toLowerCase();
+    var matches = admins.filter(function(a){ return !q || a.short.toLowerCase().indexOf(q)>=0 || a.nombre.toLowerCase().indexOf(q)>=0; });
+    if (!matches.length) {
+      drop.innerHTML = '<div class="combo-empty">Sin resultados</div>';
+    } else {
+      drop.innerHTML = matches.map(function(a){
+        return '<div class="combo-opt" data-v="'+a.nombre.replace(/"/g,'&quot;')+'">'+a.short+'<em>'+a.rows.length+' consorcio'+(a.rows.length!==1?'s':'')+'</em></div>';
+      }).join('');
+      drop.querySelectorAll('.combo-opt').forEach(function(opt) {
+        opt.addEventListener('click', function(){
+          var found = admins.find(function(a){return a.nombre===opt.dataset.v;});
+          inp.value = found ? found.short : '';
+          drop.classList.remove('open');
+          onSel(opt.dataset.v);
+        });
+      });
+    }
+    drop.classList.add('open');
+  }
+
+  inp.addEventListener('input', function(){ render(inp.value); });
+  inp.addEventListener('focus', function(){ render(inp.value); });
+  xbtn.addEventListener('click', function(){ inp.value=''; drop.classList.remove('open'); onSel(''); });
+  document.addEventListener('click', function(e){ if(!wrap.contains(e.target)) drop.classList.remove('open'); });
+}
+
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+function goPg(name) {
+  document.querySelectorAll('.pg').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.nb').forEach(function(b){ b.classList.remove('on'); });
+  var pg = document.getElementById('pg-'+name);
+  var nb = document.getElementById('nb-'+name);
+  if (pg) pg.classList.add('on');
+  if (nb) nb.classList.add('on');
+  if (name==='aging') renderAgingPage();
+  if (name==='facturas') { fRows=[].concat(DATA); fPage=1; renderFact(); }
+  if (name==='resps') renderResps();
+  if (name==='plan') renderPlan();
+  if (name==='cecilia') renderCecilia();
+  if (name==='crm') renderCRMPage();
+  if (name==='alertas') renderAlertas();
+  if (name==='envio') renderEnvioPage();
+  if (name==='config') loadConfigPage();
+}
+
+// ═══════════════════════════════════════
+// SORT
+// ═══════════════════════════════════════
+function srt(ctx, col) {
+  if (sortSt[ctx].col===col) sortSt[ctx].dir*=-1;
+  else { sortSt[ctx].col=col; sortSt[ctx].dir=-1; }
+  if (ctx==='ag') renderAging();
+  if (ctx==='f') renderFact();
+}
+function sortRows(rows, ctx) {
+  var col=sortSt[ctx].col, dir=sortSt[ctx].dir;
+  return [].concat(rows).sort(function(a,b){
+    var av=a[col], bv=b[col];
+    if (typeof av==='number') return dir*(av-bv);
+    return dir*String(av).localeCompare(String(bv));
+  });
+}
+
+// ═══════════════════════════════════════
+// RESUMEN
+// ═══════════════════════════════════════
+function renderResumen() {
+  var total = DATA.reduce(function(s,r){return s+r.total;},0);
+  var saldo = DATA.reduce(function(s,r){return s+r.saldo;},0);
+  var enProc = DATA.filter(function(r){return r.estado==='En proceso de pago';}).reduce(function(s,r){return s+r.saldo;},0);
+  var crit = DATA.filter(function(r){return r.bucket==='+120'||r.bucket==='61-90';}).reduce(function(s,r){return s+r.saldo;},0);
+  var admins = getAdmins();
+
+  document.getElementById('resumen-meta').textContent = 'Actualizado: '+TODAY_S+' · '+DATA.length+' comprobantes · '+admins.length+' administraciones';
+  document.getElementById('mets-resumen').innerHTML =
+    '<div class="met"><div class="met-lbl">Total facturado</div><div class="met-val">'+fmt(total)+'</div><div class="met-sub">'+DATA.length+' comprobantes</div></div>'+
+    '<div class="met"><div class="met-lbl">Saldo real pendiente</div><div class="met-val vr">'+fmt(saldo)+'</div><div class="met-sub">incl. en proceso</div></div>'+
+    '<div class="met"><div class="met-lbl">En proceso de débito</div><div class="met-val va">'+fmt(enProc)+'</div><div class="met-sub">aún no acreditado</div></div>'+
+    '<div class="met"><div class="met-lbl">Mora crítica +60d</div><div class="met-val vr">'+fmt(crit)+'</div></div>';
+
+  var maxS = saldo||1;
+  document.getElementById('aging-bars').innerHTML = BKDEFS.map(function(b){
+    var s=bkSum(b.k), c=bkCnt(b.k);
+    if(!s) return '';
+    return '<div class="br"><div class="bl">'+b.lbl+'</div><div class="bt"><div class="bf" style="width:'+pct(s,maxS)+'%;background:'+b.color+'"></div></div><div class="bv">'+fmt(s)+'<span style="font-size:10px;color:var(--text3);margin-left:3px">('+c+')</span></div></div>';
+  }).join('');
+
+  var resps=getResps(), maxR=resps[0]?resps[0].saldo:1;
+  var rcols=['#185FA5','#1a7a4a','#7F77DD','#b8680a','#C0392B'];
+  document.getElementById('resp-bars').innerHTML = resps.map(function(r,i){
+    return '<div class="br"><div class="bl">'+r.nombre+'</div><div class="bt"><div class="bf" style="width:'+pct(r.saldo,maxR)+'%;background:'+rcols[i%5]+'"></div></div><div class="bv">'+fmt(r.saldo)+'</div></div>';
+  }).join('');
+
+  var maxA=admins[0]?admins[0].saldo:1;
+  var acols=['#C0392B','#b8680a','#185FA5','#1a7a4a','#7F77DD'];
+  document.getElementById('admin-bars').innerHTML = admins.map(function(a,i){
+    var sc=semColor(a.maxDias), hex=semHex(sc);
+    var dot='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+hex+';margin-right:4px;vertical-align:middle"></span>';
+    return '<div class="br"><div class="bl" title="'+a.short+'">'+dot+a.short+'</div><div class="bt"><div class="bf" style="width:'+pct(a.saldo,maxA)+'%;background:'+acols[i%5]+'"></div></div><div class="bv">'+fmt(a.saldo)+'</div></div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// AGING
+// ═══════════════════════════════════════
+function renderAgingPage() {
+  document.getElementById('bk-cards').innerHTML = BKDEFS.map(function(b){
+    var s=bkSum(b.k), c=bkCnt(b.k);
+    return '<div class="bk '+b.cls+'"><div class="bk-l">'+b.lbl+'</div><div class="bk-v">'+fmt(s)+'</div><div class="bk-c">'+c+' factura'+(c!==1?'s':'')+'</div></div>';
+  }).join('');
+  renderAging();
+}
+
+function renderAging() {
+  var q=(document.getElementById('ag-q')?document.getElementById('ag-q').value:'').toLowerCase();
+  var bk=document.getElementById('ag-bk')?document.getElementById('ag-bk').value:'';
+  var resp=document.getElementById('ag-resp')?document.getElementById('ag-resp').value:'';
+  var adm=document.getElementById('ag-adm')?document.getElementById('ag-adm').value:'';
+  var rows = DATA.filter(function(r){
+    return (!q || r.cliente.toLowerCase().indexOf(q)>=0 || r.producto.toLowerCase().indexOf(q)>=0) &&
+           (!bk || r.bucket===bk) && (!resp || r.respCobranza===resp) && (!adm || r.admin===adm);
+  });
+  rows = sortRows(rows,'ag');
+  document.getElementById('ag-tbody').innerHTML = rows.map(function(r){
+    return '<tr><td title="'+r.cliente+'">'+r.cliente+'</td><td title="'+r.producto+'">'+r.producto+'</td>'+
+    '<td>'+r.fechaVenc+'</td><td style="text-align:center;font-weight:600;'+dcol(r.dias)+'">'+r.dias+'</td>'+
+    '<td>'+bbdg(r.bucket)+'</td><td style="text-align:right;font-family:\'DM Mono\',monospace;font-weight:600;color:var(--red)">'+fmt(r.saldo)+'</td>'+
+    '<td>'+r.respCobranza+'</td><td>'+r.vendedor+'</td><td title="'+r.admin+'" style="font-size:10.5px">'+shortAdmin(r.admin)+'</td></tr>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// FACTURAS
+// ═══════════════════════════════════════
+function filterFact() {
+  var q=(document.getElementById('fq').value||'').toLowerCase();
+  var e=document.getElementById('fe').value||'';
+  var r=document.getElementById('fr').value||'';
+  var b=document.getElementById('fb').value||'';
+  var a=document.getElementById('fa').value||'';
+  fRows = DATA.filter(function(x){
+    return (!q || x.cliente.toLowerCase().indexOf(q)>=0 || x.num.toLowerCase().indexOf(q)>=0 || x.producto.toLowerCase().indexOf(q)>=0) &&
+           (!e || x.estado===e) && (!r || x.respCobranza===r) && (!b || x.bucket===b) && (!a || x.admin===a);
+  });
+  fPage=1; renderFact();
+}
+
+function renderFact() {
+  var sorted=sortRows(fRows,'f'), start=(fPage-1)*PS, rows=sorted.slice(start,start+PS);
+  document.getElementById('fact-meta').textContent = fRows.length+' registros';
+  document.getElementById('f-tbody').innerHTML = rows.map(function(r){
+    return '<tr>'+
+    '<td title="'+r.cliente+'">'+r.cliente+'</td>'+
+    '<td style="font-family:\'DM Mono\',monospace;font-size:10.5px">'+r.num+'</td>'+
+    '<td title="'+r.producto+'">'+r.producto+'</td>'+
+    '<td>'+r.fechaVenc+'</td>'+
+    '<td style="text-align:center;font-weight:600;'+dcol(r.dias)+'">'+r.dias+'</td>'+
+    '<td>'+bbdg(r.bucket)+'</td>'+
+    '<td style="text-align:right;font-family:\'DM Mono\',monospace">'+fmt(r.total)+'</td>'+
+    '<td style="text-align:right;font-family:\'DM Mono\',monospace;font-weight:600;color:var(--red)">'+fmt(r.saldo)+'</td>'+
+    '<td>'+bdg(r.estado)+'</td>'+
+    '<td>'+r.respCobranza+'</td>'+
+    '<td title="'+r.admin+'" style="font-size:10.5px">'+shortAdmin(r.admin)+'</td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('fpag').textContent = (start+1)+'–'+Math.min(start+PS,fRows.length)+' de '+fRows.length;
+}
+
+function fchg(d) {
+  fPage = Math.max(1, Math.min(Math.ceil(fRows.length/PS), fPage+d));
+  renderFact();
+}
+
+// ═══════════════════════════════════════
+// CUENTA CORRIENTE
+// ═══════════════════════════════════════
+function renderCC() {
+  var cont = document.getElementById('cc-cont');
+  if (!ccAdminKey) { cont.innerHTML=''; return; }
+  var admin = getAdmins().find(function(a){return a.nombre===ccAdminKey;});
+  if (!admin) return;
+  var rows = [].concat(admin.rows).sort(function(a,b){return b.dias-a.dias;});
+  var sc=semColor(admin.maxDias), hex=semHex(sc), lbl=semLbl(sc);
+  var bsum = BKDEFS.map(function(b){
+    var s=rows.filter(function(r){return r.bucket===b.k;}).reduce(function(a,r){return a+r.saldo;},0);
+    return s>0 ? '<span class="bdg bdg2">'+b.lbl+': '+fmt(s)+'</span>' : '';
+  }).filter(Boolean).join(' ');
+
+  cont.innerHTML =
+    '<div class="card" style="margin-bottom:12px"><div class="cb">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+    '<div><div style="font-size:14px;font-weight:600;margin-bottom:4px">'+admin.short+'</div>'+
+    '<div style="font-size:11px;color:var(--text2);margin-bottom:6px">Resp.: '+admin.resps.join(', ')+' · Vendedor: '+admin.vends.join(', ')+(getAdminPhone(admin.nombre)?' · 📞 '+getAdminPhone(admin.nombre):'')+' · ✉ '+(getAdminMail(admin.nombre)||'Sin mail')+'</div>'+
+    '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">'+bsum+'</div>'+
+    '<div class="sem">'+
+    '<span class="sd" style="background:#1a7a4a;opacity:'+(sc==='verde'?1:.2)+'"></span>'+
+    '<span class="sd" style="background:#b8680a;opacity:'+(sc==='amarillo'?1:.2)+'"></span>'+
+    '<span class="sd" style="background:#C0392B;opacity:'+(sc==='rojo'?1:.2)+'"></span>'+
+    '<span style="font-size:12px;font-weight:600;color:'+hex+';margin-left:5px">'+lbl+' — '+admin.maxDias+'d mora máx.</span>'+
+    '</div></div>'+
+    '<div style="text-align:right">'+
+    '<div style="font-size:10px;color:var(--text3)">Fecha: '+TODAY_S+'</div>'+
+    '<div style="font-size:22px;font-weight:700;color:var(--red);font-family:\'DM Mono\',monospace;margin-top:3px">'+fmt(admin.saldo)+'</div>'+
+    '<div style="font-size:10px;color:var(--text3)">total adeudado</div>'+
+    '</div></div></div></div>'+
+    '<div class="tw"><table class="tbl"><thead><tr>'+
+    '<th>N° Factura</th><th>Consorcio</th><th>Producto</th><th>F. Factura</th><th>Vencimiento</th>'+
+    '<th style="text-align:center">Días</th><th style="text-align:center">Tramo</th>'+
+    '<th style="text-align:right">Total</th><th style="text-align:right">Saldo</th><th>Estado</th>'+
+    '</tr></thead><tbody>'+
+    rows.map(function(r){
+      return '<tr>'+
+      '<td style="font-family:\'DM Mono\',monospace;font-size:10px">'+r.num+'</td>'+
+      '<td title="'+r.cliente+'">'+r.cliente+'</td>'+
+      '<td title="'+r.producto+'">'+r.producto+'</td>'+
+      '<td>'+r.fechaFact+'</td><td>'+r.fechaVenc+'</td>'+
+      '<td style="text-align:center;font-weight:600;'+dcol(r.dias)+'">'+r.dias+'</td>'+
+      '<td>'+bbdg(r.bucket)+'</td>'+
+      '<td style="text-align:right;font-family:\'DM Mono\',monospace">'+fmt(r.total)+'</td>'+
+      '<td style="text-align:right;font-family:\'DM Mono\',monospace;font-weight:600;color:var(--red)">'+fmt(r.saldo)+'</td>'+
+      '<td>'+bdg(r.estado)+'</td>'+
+      '</tr>';
+    }).join('')+
+    '</tbody><tfoot><tr>'+
+    '<td colspan="7" style="font-weight:700">Total administración</td>'+
+    '<td style="text-align:right;font-family:\'DM Mono\',monospace">'+fmt(admin.total)+'</td>'+
+    '<td style="text-align:right;font-family:\'DM Mono\',monospace;color:var(--red)">'+fmt(admin.saldo)+'</td>'+
+    '<td></td></tr></tfoot></table></div>';
+}
+
+// ═══════════════════════════════════════
+// MAIL
+// ═══════════════════════════════════════
+function renderMail() {
+  var cont = document.getElementById('mail-cont');
+  if (!mailAdminKey) { cont.innerHTML=''; return; }
+  var admin = getAdmins().find(function(a){return a.nombre===mailAdminKey;});
+  if (!admin) return;
+  var rows = [].concat(admin.rows).sort(function(a,b){return b.dias-a.dias;});
+  var sc=semColor(admin.maxDias), hex=semHex(sc);
+  var resp = admin.resps.filter(function(r){return r!=='Sin asignar';}).join(', ') || 'Departamento de Cobranzas';
+  var vend = admin.vends.join(', ');
+  var prods = admin.prods.join(' / ');
+  var dn = admin.short;
+
+  var cuerpo, accion, scLbl;
+  if (sc==='verde') {
+    scLbl = 'Al día / Vencimiento próximo';
+    cuerpo = 'Les informamos que registramos <strong>'+admin.count+' comprobante'+(admin.count!==1?'s':'')+'</strong> pendientes de pago por un total de <strong>'+fmt(admin.saldo)+'</strong>, correspondientes a los consorcios detallados a continuación.';
+    accion = 'Les solicitamos efectuar los pagos dentro de los plazos acordados para evitar recargos e intereses. En caso de haber realizado algún pago, por favor remitan el comprobante correspondiente.';
+  } else if (sc==='amarillo') {
+    scLbl = 'Atención — mora entre 30 y 60 días';
+    cuerpo = 'Les informamos que registramos saldos vencidos por un total de <strong>'+fmt(admin.saldo)+'</strong> en <strong>'+admin.count+' comprobante'+(admin.count!==1?'s':'')+'</strong>, con una antigüedad de hasta <strong>'+admin.maxDias+' días</strong>. Esta situación requiere atención para regularizar las cuentas de los consorcios a su cargo.';
+    accion = 'Les solicitamos tomar contacto con nuestro sector de cobranzas a la brevedad para coordinar los pagos o acordar una modalidad de cancelación. Podemos gestionar un plan de regularización si lo requieren.';
+  } else {
+    scLbl = 'Estado crítico — mora superior a 60 días';
+    cuerpo = 'Les informamos que registramos una deuda vencida de <strong>'+fmt(admin.saldo)+'</strong> en <strong>'+admin.count+' comprobante'+(admin.count!==1?'s':'')+'</strong>, con una antigüedad máxima de <strong>'+admin.maxDias+' días</strong>. Esta situación se encuentra en estado crítico y puede derivar en acciones de recupero extrajudicial.';
+    accion = 'Les solicitamos con carácter urgente regularizar la situación o comunicarse con nuestro departamento en los próximos 5 días hábiles. De no recibir respuesta, el expediente será derivado al área legal para su gestión.';
+  }
+
+  var plainLines = [
+    'Estimados señores '+dn+',',
+    '',
+    'Nos dirigimos a Uds. en representación del equipo de cobranzas ('+resp+').',
+    '',
+    sc==='verde' ? 'Registramos '+admin.count+' comprobante(s) pendiente(s) por '+fmt(admin.saldo)+'.' :
+    sc==='amarillo' ? 'Registramos saldos vencidos por '+fmt(admin.saldo)+' con mora de hasta '+admin.maxDias+' días.' :
+    'URGENTE: Deuda vencida de '+fmt(admin.saldo)+' con mora de '+admin.maxDias+' días.',
+    '',
+    'DETALLE DE CUENTA CORRIENTE al '+TODAY_S+':',
+  ];
+  rows.forEach(function(r){
+    plainLines.push('- '+r.num+' | '+r.cliente+' | '+r.producto+' | Venc: '+r.fechaVenc+' | '+r.dias+'d mora | '+fmt(r.saldo));
+  });
+  plainLines.push('', 'TOTAL ADEUDADO: '+fmt(admin.saldo), '', accion, '', 'Saludos cordiales,', resp, 'Departamento de Cobranzas');
+  var plainText = plainLines.join('\n');
+
+  var tblRows = rows.map(function(r){
+    return '<tr>'+
+    '<td style="font-family:\'DM Mono\',monospace;font-size:10px">'+r.num+'</td>'+
+    '<td>'+r.cliente+'</td><td>'+r.producto+'</td>'+
+    '<td>'+r.fechaFact+'</td><td>'+r.fechaVenc+'</td>'+
+    '<td style="text-align:center;font-weight:600;'+(r.dias>60?'color:#C0392B':r.dias>30?'color:#b8680a':'')+'">'+r.dias+'d</td>'+
+    '<td>'+bbdg(r.bucket)+'</td>'+
+    '<td style="text-align:right;font-family:\'DM Mono\',monospace">'+fmt(r.total)+'</td>'+
+    '<td style="text-align:right;font-weight:600;font-family:\'DM Mono\',monospace;color:#C0392B">'+fmt(r.saldo)+'</td>'+
+    '</tr>';
+  }).join('');
+
+  window._mailPT = plainText;
+  cont.innerHTML =
+    '<div class="mail-card">'+
+    '<div class="mail-hdr">'+
+    '<div>'+
+    '<div class="mf">Para: <span>'+dn+'</span></div>'+
+    '<div class="mf" style="margin-top:3px">Asunto: <span>Estado de cuenta de sus consorcios — '+TODAY_S+' | '+fmt(admin.saldo)+' pendiente</span></div>'+
+    '<div class="mf" style="margin-top:3px">Responsable: <span>'+resp+'</span> · Vendedor: <span>'+vend+'</span></div>'+
+    '<div class="sem" style="margin-top:7px">'+
+    '<span class="sd" style="background:#1a7a4a;opacity:'+(sc==='verde'?1:.2)+'"></span>'+
+    '<span class="sd" style="background:#b8680a;opacity:'+(sc==='amarillo'?1:.2)+'"></span>'+
+    '<span class="sd" style="background:#C0392B;opacity:'+(sc==='rojo'?1:.2)+'"></span>'+
+    '<span style="font-size:11px;font-weight:600;color:'+hex+';margin-left:5px">'+scLbl+'</span>'+
+    '</div></div>'+
+    '<button class="copy-btn" id="copy-mail-btn" onclick="cpMail()">📋 Copiar texto</button>'+
+    '</div>'+
+    '<div class="mail-body">'+
+    '<p>Estimados señores <strong>'+dn+'</strong>,</p>'+
+    '<p style="margin-top:9px">Nos dirigimos a Uds. en representación del equipo de cobranzas, responsable de la gestión de los consorcios bajo su administración.</p>'+
+    '<p style="margin-top:9px">'+cuerpo+'</p>'+
+    '<p style="margin-top:12px;font-size:10.5px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Detalle de cuenta corriente — '+TODAY_S+'</p>'+
+    '<div class="tw" style="margin-top:7px"><table class="mail-tbl">'+
+    '<thead><tr><th>N° Factura</th><th>Consorcio</th><th>Producto</th><th>F. Factura</th><th>Vencimiento</th><th style="text-align:center">Días mora</th><th>Tramo</th><th style="text-align:right">Total</th><th style="text-align:right">Saldo</th></tr></thead>'+
+    '<tbody>'+tblRows+'</tbody>'+
+    '<tfoot><tr><td colspan="8"><strong>Total adeudado</strong></td><td style="text-align:right;font-family:\'DM Mono\',monospace;color:#C0392B;font-size:12.5px"><strong>'+fmt(admin.saldo)+'</strong></td></tr></tfoot>'+
+    '</table></div>'+
+    '<p style="margin-top:11px">'+accion+'</p>'+
+    '<p style="margin-top:11px">Quedamos a disposición para cualquier consulta o gestión de pago.</p>'+
+    '<p style="margin-top:11px">Saludos cordiales,<br><strong>'+resp+'</strong><br><em style="font-size:11px;color:var(--text2)">Departamento de Cobranzas · Productos: '+prods+'</em></p>'+
+    '</div></div>';
+}
+
+function cpMail() {
+  if (!window._mailPT) return;
+  navigator.clipboard.writeText(window._mailPT).then(function(){
+    var b=document.getElementById('copy-mail-btn');
+    if(b){ b.textContent='✓ Copiado'; b.classList.add('ok'); setTimeout(function(){b.textContent='📋 Copiar texto';b.classList.remove('ok');},2500); }
+  }).catch(function(){alert('No se pudo copiar.');});
+}
+
+// ═══════════════════════════════════════
+// RESPONSABLES
+// ═══════════════════════════════════════
+function renderResps() {
+  var resps = getResps();
+  document.getElementById('resp-cards').innerHTML = resps.map(function(r){
+    return '<div class="rc"><div class="rc-name">'+r.nombre+'</div>'+
+    '<div class="rc-kv"><span class="rc-k">Saldo pendiente</span><span class="rc-v" style="color:var(--red)">'+fmt(r.saldo)+'</span></div>'+
+    '<div class="rc-kv"><span class="rc-k">Facturas</span><span class="rc-v">'+r.count+'</span></div>'+
+    '<div class="rc-kv"><span class="rc-k">Mora crítica +60d</span><span class="rc-v" style="color:var(--red)">'+fmt(r.crit)+'</span></div>'+
+    '<div class="rc-kv"><span class="rc-k">Admins a cargo</span><span class="rc-v">'+r.admins.length+'</span></div>'+
+    '<div class="rc-kv"><span class="rc-k">1–30 días</span><span class="rc-v">'+fmt(r.buckets['1-30']||0)+'</span></div>'+
+    '<div class="rc-kv"><span class="rc-k">31–60 días</span><span class="rc-v" style="color:var(--amber)">'+fmt(r.buckets['31-60']||0)+'</span></div>'+
+    '<div class="rc-kv"><span class="rc-k">+60 días</span><span class="rc-v" style="color:var(--red)">'+fmt((r.buckets['61-90']||0)+(r.buckets['91-120']||0)+(r.buckets['+120']||0))+'</span></div>'+
+    '</div>';
+  }).join('');
+}
+
+function renderRD() {
+  var r = document.getElementById('rd-sel').value;
+  var cont = document.getElementById('rd-body');
+  if (!r) { cont.innerHTML='<p style="color:var(--text3);font-size:12px;padding:8px 0">Seleccioná un responsable.</p>'; return; }
+  var rows = sortRows(DATA.filter(function(x){return x.respCobranza===r;}), 'ag');
+  cont.innerHTML = '<div class="tw"><table class="tbl"><thead><tr>'+
+  '<th>Consorcio</th><th>Producto</th><th>Vencimiento</th>'+
+  '<th style="text-align:center">Días</th><th>Tramo</th><th style="text-align:right">Saldo</th>'+
+  '<th>Estado</th><th>Vendedor</th><th>Admin</th></tr></thead><tbody>'+
+  rows.map(function(x){
+    return '<tr><td title="'+x.cliente+'">'+x.cliente+'</td><td title="'+x.producto+'">'+x.producto+'</td>'+
+    '<td>'+x.fechaVenc+'</td><td style="text-align:center;font-weight:600;'+dcol(x.dias)+'">'+x.dias+'</td>'+
+    '<td>'+bbdg(x.bucket)+'</td><td style="text-align:right;font-family:\'DM Mono\',monospace;font-weight:600;color:var(--red)">'+fmt(x.saldo)+'</td>'+
+    '<td>'+bdg(x.estado)+'</td><td>'+x.vendedor+'</td><td title="'+x.admin+'">'+shortAdmin(x.admin)+'</td></tr>';
+  }).join('')+'</tbody></table></div>';
+}
+
+// ═══════════════════════════════════════
+// PLAN DE ACCIÓN
+// ═══════════════════════════════════════
+function genPlan(respNombre) {
+  var resps = getResps();
+  var resp = resps.find(function(r){return r.nombre===respNombre;});
+  if (!resp) return [];
+  var items = [];
+  var uid = function(n){ return respNombre.replace(/\s/g,'_')+'_'+n; };
+
+  var p120 = resp.rows.filter(function(r){return r.bucket==='+120';}).sort(function(a,b){return b.saldo-a.saldo;});
+  if (p120.length) {
+    var adms120 = [];
+    p120.slice(0,3).forEach(function(r){ var s=shortAdmin(r.admin); if(adms120.indexOf(s)<0) adms120.push(s); });
+    items.push({ id:uid('c1'), urgencia:'urgente', tag:'hoy',
+      title:'Gestionar urgente: '+p120.length+' factura'+(p120.length>1?'s':'')+' con +120 días de mora',
+      desc:'Contactar HOY a las administraciones afectadas. Total en riesgo: '+fmt(p120.reduce(function(s,r){return s+r.saldo;},0))+'. Principales: '+adms120.join(', ')+'. Sugerimos enviar carta documento si no hubo respuesta previa.' });
+  }
+  var d6090 = resp.rows.filter(function(r){return r.bucket==='61-90';}).sort(function(a,b){return b.saldo-a.saldo;});
+  if (d6090.length) {
+    var adms6090 = [];
+    d6090.forEach(function(r){ var s=shortAdmin(r.admin); if(adms6090.indexOf(s)<0) adms6090.push(s); });
+    items.push({ id:uid('c2'), urgencia:'urgente', tag:'hoy',
+      title:'Seguimiento crítico: '+d6090.length+' factura'+(d6090.length>1?'s':'')+' entre 61–90 días',
+      desc:'Monto total: '+fmt(d6090.reduce(function(s,r){return s+r.saldo;},0))+'. Administraciones: '+adms6090.slice(0,3).join(', ')+'. Recomendamos llamado telefónico directo y mail formalizado con cuenta corriente.' });
+  }
+  var d3160 = resp.rows.filter(function(r){return r.bucket==='31-60';}).sort(function(a,b){return b.saldo-a.saldo;});
+  if (d3160.length) {
+    var adms3160 = [];
+    d3160.forEach(function(r){ var s=shortAdmin(r.admin); if(adms3160.indexOf(s)<0) adms3160.push(s); });
+    items.push({ id:uid('c3'), urgencia:'moderado', tag:'semana',
+      title:'Gestionar esta semana: '+d3160.length+' factura'+(d3160.length>1?'s':'')+' entre 31–60 días',
+      desc:'Enviar mail con cuenta corriente. Monto: '+fmt(d3160.reduce(function(s,r){return s+r.saldo;},0))+'. Admins: '+adms3160.slice(0,3).join(', ')+'. Usar plantilla de semáforo amarillo.' });
+  }
+  var d0130 = resp.rows.filter(function(r){return r.bucket==='1-30';});
+  if (d0130.length) {
+    items.push({ id:uid('c4'), urgencia:'normal', tag:'semana',
+      title:'Enviar mails preventivos: '+d0130.length+' factura'+(d0130.length>1?'s':'')+' con 1–30 días',
+      desc:'Aún en plazo normal. Monto: '+fmt(d0130.reduce(function(s,r){return s+r.saldo;},0))+'. Enviar cuenta corriente informativa con semáforo verde. Priorizar las de mayor monto.' });
+  }
+  var enProc = resp.rows.filter(function(r){return r.estado==='En proceso de pago';});
+  if (enProc.length) {
+    var admsEP = [];
+    enProc.forEach(function(r){ var s=shortAdmin(r.admin); if(admsEP.indexOf(s)<0) admsEP.push(s); });
+    items.push({ id:uid('c5'), urgencia:'info', tag:'seguimiento',
+      title:'Verificar acreditación: '+enProc.length+' factura'+(enProc.length>1?'s':'')+' en proceso de débito',
+      desc:'Confirmar que los débitos de '+fmt(enProc.reduce(function(s,r){return s+r.saldo;},0))+' se hayan acreditado. Admins: '+admsEP.join(', ')+'. Si no acreditó, contactar para reprogramar.' });
+  }
+  var mAdm = {};
+  resp.rows.filter(function(r){return r.dias>30;}).forEach(function(r){
+    var k=r.admin;
+    if(!mAdm[k]) mAdm[k]={saldo:0,count:0,short:shortAdmin(r.admin)};
+    mAdm[k].saldo+=r.saldo; mAdm[k].count++;
+  });
+  var topA = Object.values(mAdm).sort(function(a,b){return b.saldo-a.saldo;})[0];
+  if (topA && topA.count>=2) {
+    items.push({ id:uid('c6'), urgencia:'moderado', tag:'hoy',
+      title:'Administración prioritaria: '+topA.short,
+      desc:'Concentra '+topA.count+' facturas vencidas por '+fmt(topA.saldo)+'. Sugerimos gestión integral: cuenta corriente completa, proponer cronograma de pago y registrar compromiso obtenido.' });
+  }
+  var pMap = {};
+  resp.rows.forEach(function(r){ pMap[r.producto]=(pMap[r.producto]||0)+r.saldo; });
+  var topP = Object.entries(pMap).sort(function(a,b){return b[1]-a[1];})[0];
+  if (topP) {
+    items.push({ id:uid('c7'), urgencia:'info', tag:'seguimiento',
+      title:'Producto con mayor deuda: '+topP[0],
+      desc:'El producto '+topP[0]+' concentra '+fmt(topP[1])+' en tu cartera. Revisar si hay patrón de demora y coordinar con el equipo para mejorar la cobranza de este producto.' });
+  }
+  return items;
+}
+
+function renderPlan() {
+  var resp = document.getElementById('plan-sel').value;
+  var cont = document.getElementById('plan-cont');
+  if (!resp) { cont.innerHTML='<p style="color:var(--text3);font-size:12px;padding:20px;text-align:center">Seleccioná un responsable.</p>'; return; }
+  if (!planSt[resp]) planSt[resp]={};
+  var items = genPlan(resp);
+  var done = items.filter(function(i){return planSt[resp][i.id];}).length;
+  var total = items.length;
+  var p = total ? Math.round(done/total*100) : 0;
+
+  function renderItems(arr) {
+    return arr.map(function(item){
+      var isDone = !!planSt[resp][item.id];
+      var tagLabel = item.tag==='hoy'?'HOY':item.tag==='semana'?'SEMANA':'SEGUIMIENTO';
+      return '<div class="pi '+item.urgencia+(isDone?' done-i':'')+'" id="pi-'+item.id+'">'+
+      '<div class="pi-chk'+(isDone?' ck':'')+'" onclick="togPlan(\''+resp+'\',\''+item.id+'\')">'+
+      (isDone?'✓':'')+'</div>'+
+      '<div class="pi-body">'+
+      '<div class="pi-title">'+item.title+'<span class="ptag '+item.tag+'">'+tagLabel+'</span></div>'+
+      '<div class="pi-desc">'+item.desc+'</div>'+
+      '</div></div>';
+    }).join('');
+  }
+
+  var hoy = items.filter(function(i){return i.tag==='hoy';});
+  var sem = items.filter(function(i){return i.tag==='semana';});
+  var seg = items.filter(function(i){return i.tag==='seguimiento';});
+
+  cont.innerHTML =
+  '<div class="card" style="margin-bottom:12px"><div class="cb">'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">'+
+  '<div style="font-size:12.5px;font-weight:600">'+resp+' — Progreso del plan</div>'+
+  '<div style="font-size:12px;color:var(--text2)">'+done+' de '+total+' acciones</div></div>'+
+  '<div class="prog-w"><div class="prog-b" style="width:'+p+'%"></div></div>'+
+  '<div style="font-size:10px;color:var(--text3);margin-top:3px">'+p+'% completado</div>'+
+  '</div></div>'+
+  (hoy.length ? '<div class="plan-section" style="margin-bottom:18px"><div class="ps-title">🔴 Acciones para hoy — urgente</div>'+renderItems(hoy)+'</div>' : '')+
+  (sem.length  ? '<div class="plan-section" style="margin-bottom:18px"><div class="ps-title">🟡 Esta semana — importante</div>'+renderItems(sem)+'</div>' : '')+
+  (seg.length  ? '<div class="plan-section" style="margin-bottom:18px"><div class="ps-title">🔵 Seguimiento y monitoreo</div>'+renderItems(seg)+'</div>' : '')+
+  '<div style="font-size:10.5px;color:var(--text3);padding:8px;background:var(--surface2);border-radius:var(--r)">'+
+  '💡 Plan generado a partir de los datos actuales. Las acciones marcadas se guardan en el navegador.</div>';
+}
+
+function togPlan(resp, itemId) {
+  if (!planSt[resp]) planSt[resp]={};
+  planSt[resp][itemId] = !planSt[resp][itemId];
+  localStorage.setItem('planSt', JSON.stringify(planSt));
+  renderPlan();
+  updateAlertBadge();
+}
+
+// ═══════════════════════════════════════
+// CECILIA
+// ═══════════════════════════════════════
+function renderCecilia() {
+  var resps = getResps();
+  var totalS = resps.reduce(function(s,r){return s+r.saldo;},0);
+  var totalC = resps.reduce(function(s,r){return s+r.crit;},0);
+  var allItems = [];
+  resps.forEach(function(r){ genPlan(r.nombre).forEach(function(i){allItems.push({item:i,resp:r.nombre});}); });
+  var doneItems = allItems.filter(function(x){return planSt[x.resp]&&planSt[x.resp][x.item.id];}).length;
+
+  document.getElementById('cec-mets').innerHTML =
+  '<div class="met"><div class="met-lbl">Saldo total equipo</div><div class="met-val vr">'+fmt(totalS)+'</div></div>'+
+  '<div class="met"><div class="met-lbl">Mora crítica +60d</div><div class="met-val vr">'+fmt(totalC)+'</div></div>'+
+  '<div class="met"><div class="met-lbl">Responsables activos</div><div class="met-val vb">'+resps.length+'</div></div>'+
+  '<div class="met"><div class="met-lbl">Avance plan acción</div><div class="met-val vg">'+pct(doneItems,allItems.length)+'%</div><div class="met-sub">'+doneItems+' de '+allItems.length+'</div></div>';
+
+  document.getElementById('cec-plans').innerHTML =
+  '<div class="cg" style="margin-bottom:18px">'+
+  resps.map(function(r){
+    var items=genPlan(r.nombre);
+    var done=items.filter(function(i){return planSt[r.nombre]&&planSt[r.nombre][i.id];}).length;
+    var p=items.length?Math.round(done/items.length*100):0;
+    var urg=items.filter(function(i){return i.urgencia==='urgente'&&!(planSt[r.nombre]&&planSt[r.nombre][i.id]);});
+    var sc=semColor(r.rows.reduce(function(m,x){return Math.max(m,x.dias);},0));
+    return '<div class="rc">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">'+
+    '<div class="rc-name" style="margin:0">'+r.nombre+'</div>'+
+    '<span style="width:9px;height:9px;border-radius:50%;background:'+semHex(sc)+';display:inline-block"></span>'+
+    '</div>'+
+    '<div class="rc-kv"><span class="rc-k">Cartera</span><span class="rc-v" style="color:var(--red)">'+fmt(r.saldo)+'</span></div>'+
+    '<div class="rc-kv"><span class="rc-k">Mora crítica</span><span class="rc-v" style="color:var(--red)">'+fmt(r.crit)+'</span></div>'+
+    '<div class="rc-kv"><span class="rc-k">Admins</span><span class="rc-v">'+r.admins.length+'</span></div>'+
+    '<div style="margin-top:9px"><div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text2);margin-bottom:3px"><span>Plan de acción</span><span>'+done+'/'+items.length+'</span></div>'+
+    '<div class="prog-w"><div class="prog-b" style="width:'+p+'%;background:'+(p===100?'var(--green)':p>50?'var(--amber)':'var(--red)')+'"></div></div></div>'+
+    (urg.length ? '<div style="margin-top:7px;font-size:10.5px;color:var(--red);background:var(--red-bg);padding:5px 8px;border-radius:var(--r)">⚠ '+urg.length+' acción'+(urg.length>1?'es':'')+" urgente"+(urg.length>1?'s':'')+' pendiente'+(urg.length>1?'s':'')+'</div>' :
+      done===items.length&&items.length ? '<div style="margin-top:7px;font-size:10.5px;color:var(--green);background:var(--green-bg);padding:5px 8px;border-radius:var(--r)">✓ Plan completado</div>' : '')+
+    '</div>';
+  }).join('')+'</div>'+
+  '<div><div style="font-size:13px;font-weight:600;margin-bottom:10px">Acciones pendientes por responsable</div>'+
+  resps.map(function(r){
+    var items=genPlan(r.nombre);
+    var pend=items.filter(function(i){return !(planSt[r.nombre]&&planSt[r.nombre][i.id]);});
+    if (!pend.length) return '<div style="padding:9px 13px;background:var(--green-bg);border-radius:var(--r);margin-bottom:7px;font-size:12px;color:var(--green)">✓ <strong>'+r.nombre+'</strong> — todas las acciones completadas</div>';
+    return '<div class="card" style="margin-bottom:9px"><div class="ch"><span class="ct">'+r.nombre+'</span><span style="font-size:11px;color:var(--text3)">'+pend.length+' pendiente'+(pend.length>1?'s':'')+'</span></div><div class="cb">'+
+    pend.map(function(i){
+      var tag=i.tag==='hoy'?'HOY':i.tag==='semana'?'SEMANA':'SEGU.';
+      return '<div class="pi '+i.urgencia+'" style="margin-bottom:6px">'+
+      '<div class="pi-chk" onclick="togPlanC(\''+r.nombre+'\',\''+i.id+'\')"></div>'+
+      '<div class="pi-body"><div class="pi-title">'+i.title+'<span class="ptag '+i.tag+'">'+tag+'</span></div>'+
+      '<div class="pi-desc" style="font-size:11px">'+i.desc+'</div></div></div>';
+    }).join('')+
+    '</div></div>';
+  }).join('')+'</div>';
+}
+
+function togPlanC(resp, id) {
+  if (!planSt[resp]) planSt[resp]={};
+  planSt[resp][id]=!planSt[resp][id];
+  localStorage.setItem('planSt', JSON.stringify(planSt));
+  renderCecilia();
+  updateAlertBadge();
+}
+
+// ═══════════════════════════════════════
+// CRM
+// ═══════════════════════════════════════
+function crmLoad() { try { return JSON.parse(localStorage.getItem('crmData')||'{}'); } catch(e){return{};} }
+function crmSave(d) { localStorage.setItem('crmData', JSON.stringify(d)); }
+function remLoad() { try { return JSON.parse(localStorage.getItem('remData')||'[]'); } catch(e){return[];} }
+function remSave(a) { localStorage.setItem('remData', JSON.stringify(a)); }
+
+function renderCRMPage() {
+  var rf = document.getElementById('crm-rf');
+  if (rf && rf.options.length<=1) {
+    getResps().forEach(function(r){ var o=document.createElement('option'); o.value=r.nombre; o.textContent=r.nombre; rf.appendChild(o); });
+  }
+  renderCRMList();
+  if (crmAdmin) renderCRMPanel(crmAdmin);
+}
+
+function renderCRMList() {
+  var q=(document.getElementById('crm-q')?document.getElementById('crm-q').value:'').toLowerCase();
+  var rf=(document.getElementById('crm-rf')?document.getElementById('crm-rf').value:'');
+  var admins=getAdmins().filter(function(a){
+    return (!q||a.short.toLowerCase().indexOf(q)>=0) && (!rf||a.resps.indexOf(rf)>=0);
+  });
+  var crm=crmLoad(), rems=remLoad();
+  document.getElementById('crm-list').innerHTML = admins.map(function(a){
+    var acts=(crm[a.nombre]?crm[a.nombre].activities||[]:[]);
+    var aRems=rems.filter(function(r){return r.admin===a.nombre&&!r.done;});
+    var over=aRems.some(function(r){return new Date(r.date)<TODAY;});
+    var tod=aRems.some(function(r){return new Date(r.date).toDateString()===TODAY.toDateString();});
+    var sc=semColor(a.maxDias);
+    var last=acts.length?acts[acts.length-1]:null;
+    return '<div class="crm-ai'+(crmAdmin===a.nombre?' sel':'')+'" onclick="selCRM(\''+a.nombre.replace(/'/g,"\\'")+'\')">' +
+    '<div style="display:flex;align-items:center;gap:5px">'+
+    '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+semHex(sc)+';flex-shrink:0"></span>'+
+    '<div class="crm-ai-name">'+a.short+'</div>'+
+    (over?'<span style="color:var(--red);margin-left:auto">⚠</span>':tod?'<span style="color:var(--amber);margin-left:auto">🔔</span>':'')+
+    '</div>'+
+    '<div class="crm-ai-meta"><span>'+fmt(a.saldo)+'</span><span>·</span>'+
+    '<span>'+(acts.length?last.date:'<span style="color:var(--red)">Sin actividad</span>')+'</span>'+
+    (aRems.length?'<span>· 🔔'+aRems.length+'</span>':'')+
+    '</div></div>';
+  }).join('');
+}
+
+function selCRM(adminKey) {
+  crmAdmin=adminKey;
+  crmTab='actividades';
+  renderCRMList();
+  renderCRMPanel(adminKey);
+}
+
+function renderCRMPanel(adminKey) {
+  var admin=getAdmins().find(function(a){return a.nombre===adminKey;});
+  if (!admin) return;
+  var crm=crmLoad();
+  var aData=crm[adminKey]||{activities:[],promesas:[]};
+  var rems=remLoad().filter(function(r){return r.admin===adminKey;});
+  var acts=aData.activities||[];
+  var proms=aData.promesas||[];
+  var sc=semColor(admin.maxDias);
+  var contacts=acts.filter(function(a){return a.type!=='nota';}).length;
+  var lastC=acts.filter(function(a){return a.type!=='nota';}).sort(function(a,b){return b.ts-a.ts;})[0];
+  var promA=proms.filter(function(p){return !p.cumplida&&!p.cancelada;}).sort(function(a,b){return new Date(a.fecha)-new Date(b.fecha);})[0];
+
+  document.getElementById('crm-panel').innerHTML =
+  '<div class="card" style="margin-bottom:12px"><div class="cb">'+
+  '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+  '<div><div style="font-size:14px;font-weight:700;margin-bottom:3px">'+admin.short+'</div>'+
+  '<div style="font-size:11px;color:var(--text2)">Resp.: '+admin.resps.join(', ')+' · '+admin.count+' comprobantes'+(getAdminPhone(admin.nombre)?' · 📞 '+getAdminPhone(admin.nombre):'')+'</div></div>'+
+  '<div style="text-align:right">'+
+  '<div style="font-size:19px;font-weight:700;color:var(--red);font-family:\'DM Mono\',monospace">'+fmt(admin.saldo)+'</div>'+
+  '<div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:3px">'+
+  '<span style="width:8px;height:8px;border-radius:50%;background:'+semHex(sc)+';display:inline-block"></span>'+
+  '<span style="font-size:11px;font-weight:500;color:'+semHex(sc)+'">'+semLbl(sc)+' — '+admin.maxDias+'d</span>'+
+  '</div></div></div>'+
+  '<div class="minis" style="margin-top:10px">'+
+  '<div class="mini"><div class="mini-v">'+contacts+'</div><div class="mini-l">Contactos</div></div>'+
+  '<div class="mini"><div class="mini-v" style="font-size:13px">'+( lastC?lastC.date:'—')+'</div><div class="mini-l">Último contacto</div></div>'+
+  '<div class="mini"><div class="mini-v" style="font-size:13px;'+(promA?'color:var(--amber)':'')+'">'+( promA?promA.fecha:'—')+'</div><div class="mini-l">Promesa pago</div></div>'+
+  '<div class="mini"><div class="mini-v">'+rems.filter(function(r){return !r.done;}).length+'</div><div class="mini-l">Recordatorios</div></div>'+
+  '</div>'+
+  (promA ? '<div class="prom'+(new Date(promA.fecha)<TODAY?' ven':'')+'" style="margin-top:9px">'+
+  '<div style="font-size:12px;font-weight:700;margin-bottom:3px">💰 Promesa activa'+(new Date(promA.fecha)<TODAY?' — VENCIDA':'')+'</div>'+
+  '<div style="font-size:11.5px">Fecha: <strong>'+promA.fecha+'</strong>'+(promA.monto?' · Monto: <strong>'+fmt(parseFloat(promA.monto))+'</strong>':'')+' '+(promA.nota||'')+'</div>'+
+  '<div style="display:flex;gap:6px;margin-top:7px">'+
+  '<button class="btn-p" style="font-size:10.5px;padding:3px 11px" onclick="markProm(\''+adminKey+'\',\''+promA.id+'\')">✓ Cobrado</button>'+
+  '<button class="btn-s" style="font-size:10.5px;padding:3px 11px" onclick="cancelProm(\''+adminKey+'\',\''+promA.id+'\')">× Cancelar</button>'+
+  '</div></div>' : '')+
+  '</div></div>'+
+  renderCRMTabs(adminKey, aData, rems, admin);
+}
+
+function renderCRMTabs(adminKey, aData, rems, admin) {
+  var acts=aData.activities||[];
+  var proms=aData.promesas||[];
+  var tabBar =
+  '<div class="card"><div class="cb">'+
+  '<div class="crm-tabs">'+
+  '<button class="crm-tab'+(crmTab==='actividades'?' on':'')+'" onclick="setCRMTab(\'actividades\',\''+adminKey+'\')">📋 Actividades ('+acts.length+')</button>'+
+  '<button class="crm-tab'+(crmTab==='nueva'?' on':'')+'" onclick="setCRMTab(\'nueva\',\''+adminKey+'\')">➕ Nueva</button>'+
+  '<button class="crm-tab'+(crmTab==='recordatorios'?' on':'')+'" onclick="setCRMTab(\'recordatorios\',\''+adminKey+'\')">🔔 Recordatorios ('+rems.filter(function(r){return !r.done;}).length+')</button>'+
+  '<button class="crm-tab'+(crmTab==='promesas'?' on':'')+'" onclick="setCRMTab(\'promesas\',\''+adminKey+'\')">💰 Promesas ('+proms.length+')</button>'+
+  '<button class="crm-tab'+(crmTab==='cuenta'?' on':'')+'" onclick="setCRMTab(\'cuenta\',\''+adminKey+'\')">📄 Cta. Cte.</button>'+
+  '</div>'+
+  renderCRMTabContent(crmTab, adminKey, aData, rems, admin)+
+  '</div></div>';
+  return tabBar;
+}
+
+function renderCRMTabContent(tab, adminKey, aData, rems, admin) {
+  var acts=(aData.activities||[]).slice().reverse();
+  var proms=(aData.promesas||[]).slice().reverse();
+
+  if (tab==='actividades') {
+    if (!acts.length) return '<div style="text-align:center;padding:28px;color:var(--text3);font-size:12px">Sin actividades aún. Usá "Nueva" para empezar.</div>';
+    return '<div class="tl">'+acts.map(function(a){
+      var t=ACT[a.type]||ACT.nota;
+      var res=RESS.find(function(r){return r.v===a.result;});
+      return '<div class="tl-it">'+
+      '<div class="tl-dw"><div class="tl-dot">'+t.icon+'</div><div class="tl-line"></div></div>'+
+      '<div class="tl-b">'+
+      '<div class="tl-h"><div><span class="tl-title">'+t.lbl+'</span>'+(a.consorcio?'<span style="font-size:10px;color:var(--text3);margin-left:5px">· '+a.consorcio+'</span>':'')+
+      '</div><div style="display:flex;align-items:center;gap:5px">'+
+      '<span class="tl-date">'+a.date+' '+(a.time||'')+'</span>'+
+      '<button class="btn-d" onclick="delAct(\''+adminKey+'\',\''+a.id+'\')">×</button>'+
+      '</div></div>'+
+      '<div class="tl-note">'+a.note+'</div>'+
+      (res?'<span class="'+res.cls+'">'+res.lbl+'</span>':'')+
+      (a.resp?'<div style="font-size:10px;color:var(--text3);margin-top:3px">Por: '+a.resp+'</div>':'')+
+      '</div></div>';
+    }).join('')+'</div>';
+  }
+
+  if (tab==='nueva') {
+    var cons=admin.rows.map(function(r){return r.cliente;}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
+    var dateVal=new Date().toISOString().slice(0,10);
+    var timeVal=new Date().toTimeString().slice(0,5);
+    return '<div class="aform" style="background:transparent;border:none;padding:0">'+
+    '<div class="frow">'+
+    '<select id="at-type">'+Object.entries(ACT).map(function(e){return '<option value="'+e[0]+'">'+e[1].icon+' '+e[1].lbl+'</option>';}).join('')+'</select>'+
+    '<select id="at-res"><option value="">Resultado (opcional)</option>'+RESS.map(function(r){return '<option value="'+r.v+'">'+r.lbl+'</option>';}).join('')+'</select>'+
+    '</div>'+
+    '<div class="frow">'+
+    '<select id="at-cons"><option value="">Consorcio (opcional)</option>'+cons.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('')+'</select>'+
+    '<select id="at-resp2"><option value="">Responsable</option>'+admin.resps.filter(function(r){return r!=='Sin asignar';}).map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join('')+'</select>'+
+    '</div>'+
+    '<div class="frow"><input type="date" id="at-date" value="'+dateVal+'"><input type="time" id="at-time" value="'+timeVal+'"></div>'+
+    '<div class="frow"><textarea id="at-note" placeholder="Describí la actividad, compromisos obtenidos, etc."></textarea></div>'+
+    '<div style="display:flex;justify-content:flex-end">'+
+    '<button class="btn-p" onclick="saveAct(\''+adminKey+'\')">💾 Guardar actividad</button>'+
+    '</div></div>';
+  }
+
+  if (tab==='recordatorios') {
+    var dateR=new Date(TODAY.getTime()+86400000).toISOString().slice(0,10);
+    return '<div class="aform"><h4>Agregar recordatorio</h4>'+
+    '<div class="frow"><input type="date" id="rm-date" value="'+dateR+'"><input type="text" id="rm-title" placeholder="Título del recordatorio"></div>'+
+    '<div class="frow"><input type="text" id="rm-note" placeholder="Notas (opcional)"><select id="rm-resp"><option value="">Responsable</option>'+admin.resps.filter(function(r){return r!=='Sin asignar';}).map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join('')+'</select></div>'+
+    '<div style="display:flex;justify-content:flex-end"><button class="btn-p" onclick="saveRem(\''+adminKey+'\')">🔔 Agregar</button></div>'+
+    '</div>'+
+    '<div class="rem-list">'+
+    (rems.length ? rems.sort(function(a,b){return new Date(a.date)-new Date(b.date);}).map(function(r){
+      var d=new Date(r.date), over=d<TODAY&&!r.done, tod=d.toDateString()===TODAY.toDateString();
+      var cls=r.done?'':over?'ov':tod?'td':'fu';
+      return '<div class="rem-it '+cls+'" style="'+(r.done?'opacity:.5':'')+'">'+
+      '<div class="ri-date" style="'+(over?'color:var(--red)':'')+'">'+r.date+'</div>'+
+      '<div class="ri-body"><div class="ri-title">'+(r.done?'<s>':'')+r.title+(r.done?'</s>':'')+'</div><div class="ri-meta">'+(r.note||'')+' '+(r.resp?'· '+r.resp:'')+'</div></div>'+
+      '<div class="ri-acts">'+(!r.done?'<button class="btn-p" style="font-size:10px;padding:2px 7px" onclick="doneRem(\''+r.id+'\',\''+adminKey+'\')">✓</button>':'')+
+      '<button class="btn-d" onclick="delRem(\''+r.id+'\',\''+adminKey+'\')">×</button></div>'+
+      '</div>';
+    }).join('') : '<div style="text-align:center;padding:18px;color:var(--text3);font-size:12px">Sin recordatorios.</div>')+
+    '</div>';
+  }
+
+  if (tab==='promesas') {
+    return '<div class="aform"><h4>Registrar promesa de pago</h4>'+
+    '<div class="frow"><input type="date" id="pr-fecha"><input type="number" id="pr-monto" placeholder="Monto (opcional)">'+
+    '<select id="pr-resp"><option value="">Responsable</option>'+admin.resps.filter(function(r){return r!=='Sin asignar';}).map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join('')+'</select></div>'+
+    '<div class="frow"><input type="text" id="pr-nota" placeholder="Detalles, condiciones..."></div>'+
+    '<div style="display:flex;justify-content:flex-end"><button class="btn-p" onclick="saveProm(\''+adminKey+'\')">💰 Registrar promesa</button></div>'+
+    '</div>'+
+    proms.map(function(p){
+      var over=new Date(p.fecha)<TODAY&&!p.cumplida&&!p.cancelada;
+      var cls=p.cumplida?'cum':p.cancelada?'':over?'ven':'';
+      return '<div class="prom '+cls+'" style="'+(p.cancelada?'opacity:.5':'')+'margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between"><div style="font-size:12px;font-weight:700">'+(p.cumplida?'✅ Cobrado':p.cancelada?'❌ Cancelada':over?'⚠ VENCIDA':'💰 Activa')+' — '+p.fecha+'</div><div style="font-size:11px;color:var(--text2)">'+(p.resp||'')+'</div></div>'+
+      '<div style="font-size:11.5px;margin-top:3px">'+(p.monto?fmt(parseFloat(p.monto)):'')+' '+(p.nota?'· '+p.nota:'')+'</div>'+
+      (!p.cumplida&&!p.cancelada?'<div style="display:flex;gap:5px;margin-top:7px"><button class="btn-p" style="font-size:10px;padding:2px 9px" onclick="markProm(\''+adminKey+'\',\''+p.id+'\')">✓ Cobrado</button><button class="btn-s" style="font-size:10px;padding:2px 9px" onclick="cancelProm(\''+adminKey+'\',\''+p.id+'\')">× Cancelar</button></div>':'')+
+      '</div>';
+    }).join('');
+  }
+
+  if (tab==='cuenta') {
+    var rows=[].concat(admin.rows).sort(function(a,b){return b.dias-a.dias;});
+    return '<div class="tw"><table class="tbl"><thead><tr>'+
+    '<th>N° Factura</th><th>Consorcio</th><th>Producto</th><th>Vencimiento</th>'+
+    '<th style="text-align:center">Días</th><th>Tramo</th><th style="text-align:right">Total</th>'+
+    '<th style="text-align:right">Saldo</th><th>Estado</th></tr></thead><tbody>'+
+    rows.map(function(r){
+      return '<tr>'+
+      '<td style="font-family:\'DM Mono\',monospace;font-size:10px">'+r.num+'</td>'+
+      '<td title="'+r.cliente+'">'+r.cliente+'</td><td title="'+r.producto+'">'+r.producto+'</td>'+
+      '<td>'+r.fechaVenc+'</td>'+
+      '<td style="text-align:center;font-weight:600;'+dcol(r.dias)+'">'+r.dias+'</td>'+
+      '<td>'+bbdg(r.bucket)+'</td>'+
+      '<td style="text-align:right;font-family:\'DM Mono\',monospace">'+fmt(r.total)+'</td>'+
+      '<td style="text-align:right;font-family:\'DM Mono\',monospace;font-weight:600;color:var(--red)">'+fmt(r.saldo)+'</td>'+
+      '<td>'+bdg(r.estado)+'</td></tr>';
+    }).join('')+
+    '</tbody><tfoot><tr><td colspan="7" style="font-weight:700">Total</td>'+
+    '<td style="text-align:right;font-family:\'DM Mono\',monospace;color:var(--red);font-weight:700">'+fmt(admin.saldo)+'</td><td></td></tr></tfoot></table></div>';
+  }
+  return '';
+}
+
+function setCRMTab(tab, adminKey) {
+  crmTab=tab;
+  renderCRMPanel(adminKey);
+}
+
+// ── CRM CRUD ──
+function saveAct(adminKey) {
+  var type=document.getElementById('at-type').value;
+  var res=document.getElementById('at-res').value;
+  var note=(document.getElementById('at-note').value||'').trim();
+  var date=document.getElementById('at-date').value;
+  var time=document.getElementById('at-time').value;
+  var cons=document.getElementById('at-cons').value;
+  var resp=document.getElementById('at-resp2').value;
+  if (!note) { alert('Escribí una nota.'); return; }
+  var crm=crmLoad();
+  if (!crm[adminKey]) crm[adminKey]={activities:[],promesas:[]};
+  crm[adminKey].activities.push({ id:Date.now().toString(36), type:type, result:res, note:note, date:date, time:time, consorcio:cons, resp:resp, ts:Date.now() });
+  crmSave(crm);
+  crmTab='actividades';
+  renderCRMPanel(adminKey);
+  renderCRMList();
+}
+
+function delAct(adminKey, id) {
+  if (!confirm('¿Eliminar actividad?')) return;
+  var crm=crmLoad();
+  if (crm[adminKey]) crm[adminKey].activities=crm[adminKey].activities.filter(function(a){return a.id!==id;});
+  crmSave(crm);
+  renderCRMPanel(adminKey);
+  renderCRMList();
+}
+
+function saveRem(adminKey) {
+  var date=document.getElementById('rm-date').value;
+  var title=(document.getElementById('rm-title').value||'').trim();
+  var note=(document.getElementById('rm-note').value||'').trim();
+  var resp=document.getElementById('rm-resp').value;
+  if (!date||!title) { alert('Completá fecha y título.'); return; }
+  var rems=remLoad();
+  rems.push({ id:Date.now().toString(36), admin:adminKey, date:date, title:title, note:note, resp:resp, done:false, ts:Date.now() });
+  remSave(rems);
+  renderCRMPanel(adminKey);
+  updateAlertBadge();
+}
+
+function doneRem(id, adminKey) {
+  var rems=remLoad(), r=rems.find(function(x){return x.id===id;});
+  if(r) r.done=true;
+  remSave(rems);
+  renderCRMPanel(adminKey);
+  updateAlertBadge();
+}
+
+function delRem(id, adminKey) {
+  if (!confirm('¿Eliminar recordatorio?')) return;
+  remSave(remLoad().filter(function(r){return r.id!==id;}));
+  renderCRMPanel(adminKey);
+  updateAlertBadge();
+}
+
+function saveProm(adminKey) {
+  var fecha=document.getElementById('pr-fecha').value;
+  var monto=document.getElementById('pr-monto').value;
+  var nota=(document.getElementById('pr-nota').value||'').trim();
+  var resp=document.getElementById('pr-resp').value;
+  if (!fecha) { alert('Ingresá la fecha.'); return; }
+  var crm=crmLoad();
+  if (!crm[adminKey]) crm[adminKey]={activities:[],promesas:[]};
+  var id=Date.now().toString(36);
+  crm[adminKey].promesas.push({ id:id, fecha:fecha, monto:monto, nota:nota, resp:resp, cumplida:false, cancelada:false, ts:Date.now() });
+  crm[adminKey].activities.push({ id:id+'p', type:'nota', result:'positivo', note:'Promesa de pago registrada para el '+fecha+(monto?' por '+fmt(parseFloat(monto)):'')+'. '+(nota||''), date:new Date().toISOString().slice(0,10), resp:resp, ts:Date.now() });
+  crmSave(crm);
+  renderCRMPanel(adminKey);
+}
+
+function markProm(adminKey, id) {
+  var crm=crmLoad();
+  var p=crm[adminKey]&&crm[adminKey].promesas&&crm[adminKey].promesas.find(function(x){return x.id===id;});
+  if (p) {
+    p.cumplida=true;
+    crm[adminKey].activities.push({ id:Date.now().toString(36), type:'pago', result:'pago', note:'Pago cobrado — promesa del '+p.fecha+(p.monto?' por '+fmt(parseFloat(p.monto)):''), date:new Date().toISOString().slice(0,10), ts:Date.now() });
+    crmSave(crm);
+  }
+  renderCRMPanel(adminKey);
+}
+
+function cancelProm(adminKey, id) {
+  var crm=crmLoad();
+  var p=crm[adminKey]&&crm[adminKey].promesas&&crm[adminKey].promesas.find(function(x){return x.id===id;});
+  if (p) { p.cancelada=true; crmSave(crm); }
+  renderCRMPanel(adminKey);
+}
+
+// ═══════════════════════════════════════
+// ALERTAS
+// ═══════════════════════════════════════
+function updateAlertBadge() {
+  var rems=remLoad();
+  var over=rems.filter(function(r){return !r.done&&new Date(r.date)<TODAY;}).length;
+  var crm=crmLoad();
+  var admins=DATA.length?getAdmins():[];
+  var sinAct=admins.filter(function(a){return !(crm[a.nombre]&&crm[a.nombre].activities&&crm[a.nombre].activities.length);}).length;
+  var pvenc=0;
+  Object.values(crm).forEach(function(d){(d.promesas||[]).forEach(function(p){if(!p.cumplida&&!p.cancelada&&new Date(p.fecha)<TODAY) pvenc++;});});
+  var total=over+(sinAct>0?1:0)+pvenc;
+  var b=document.getElementById('abadge');
+  if (b) { b.textContent=total; b.style.display=total>0?'inline':'none'; }
+}
+
+function renderAlertas() {
+  var cont=document.getElementById('alertas-cont');
+  if (!DATA.length) { cont.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3)">Cargá el Excel primero.</div>'; return; }
+  var admins=getAdmins();
+  var crm=crmLoad(), rems=remLoad();
+
+  var overRems=rems.filter(function(r){return !r.done&&new Date(r.date)<TODAY;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+  var todRems=rems.filter(function(r){return !r.done&&new Date(r.date).toDateString()===TODAY.toDateString();});
+  var pvenc=[];
+  Object.entries(crm).forEach(function(kv){
+    (kv[1].promesas||[]).forEach(function(p){
+      if (!p.cumplida&&!p.cancelada&&new Date(p.fecha)<TODAY) {
+        var a=admins.find(function(x){return x.nombre===kv[0];});
+        pvenc.push(Object.assign({},p,{adminKey:kv[0],adminShort:a?a.short:kv[0]}));
+      }
+    });
+  });
+  var sinCrit=admins.filter(function(a){return a.maxDias>60&&!(crm[a.nombre]&&crm[a.nombre].activities&&crm[a.nombre].activities.length);});
+  var sinReciente=admins.filter(function(a){
+    if (a.maxDias<=30) return false;
+    var acts=crm[a.nombre]?crm[a.nombre].activities||[]:[];
+    if (!acts.length) return false;
+    var last=Math.max.apply(null,acts.map(function(x){return x.ts||0;}));
+    return (Date.now()-last)>7*86400000;
+  });
+  var total=overRems.length+todRems.length+pvenc.length+sinCrit.length+sinReciente.length;
+
+  cont.innerHTML =
+  (total===0 ? '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;color:var(--green)"><div style="font-size:38px;margin-bottom:10px">✅</div><div style="font-size:15px;font-weight:600">Todo en orden</div><div style="font-size:12px;color:var(--text3);margin-top:5px">Sin alertas pendientes</div></div>' :
+  '<div class="albar"><div class="albar-n">'+total+'</div><div class="albar-t">alerta'+(total!==1?'s':'')+' requieren atención</div></div>')+
+
+  (overRems.length ? '<div class="card" style="margin-bottom:11px"><div class="ch" style="background:var(--red-bg)"><span class="ct" style="color:var(--red)">⚠ Recordatorios vencidos ('+overRems.length+')</span></div><div class="cb"><div class="rem-list">'+
+  overRems.map(function(r){
+    return '<div class="rem-it ov"><div class="ri-date" style="color:var(--red)">'+r.date+'</div>'+
+    '<div class="ri-body"><div class="ri-title">'+r.title+'</div><div class="ri-meta">'+shortAdmin(r.admin)+' '+(r.resp?'· '+r.resp:'')+'</div></div>'+
+    '<div class="ri-acts"><button class="btn-p" style="font-size:10px;padding:2px 7px" onclick="doneRemA(\''+r.id+'\')">✓</button>'+
+    '<button class="btn-s" style="font-size:10px;padding:2px 7px" onclick="selCRM(\''+r.admin+'\');goPg(\'crm\')">Ver</button></div></div>';
+  }).join('')+'</div></div></div>' : '')+
+
+  (todRems.length ? '<div class="card" style="margin-bottom:11px"><div class="ch" style="background:var(--amber-bg)"><span class="ct" style="color:var(--amber)">🔔 Recordatorios de hoy ('+todRems.length+')</span></div><div class="cb"><div class="rem-list">'+
+  todRems.map(function(r){
+    return '<div class="rem-it td"><div class="ri-date">'+r.date+'</div>'+
+    '<div class="ri-body"><div class="ri-title">'+r.title+'</div><div class="ri-meta">'+shortAdmin(r.admin)+'</div></div>'+
+    '<div class="ri-acts"><button class="btn-s" style="font-size:10px;padding:2px 7px" onclick="selCRM(\''+r.admin+'\');goPg(\'crm\')">Ver</button></div></div>';
+  }).join('')+'</div></div></div>' : '')+
+
+  (pvenc.length ? '<div class="card" style="margin-bottom:11px"><div class="ch" style="background:var(--red-bg)"><span class="ct" style="color:var(--red)">💰 Promesas de pago vencidas ('+pvenc.length+')</span></div><div class="cb">'+
+  pvenc.map(function(p){
+    return '<div class="prom ven" style="margin-bottom:7px"><div style="display:flex;justify-content:space-between"><strong>'+p.adminShort+'</strong><span style="font-size:11px">Vencía: '+p.fecha+'</span></div>'+
+    '<div style="font-size:11.5px;margin-top:3px">'+(p.monto?fmt(parseFloat(p.monto)):'')+' '+(p.nota?'· '+p.nota:'')+'</div>'+
+    '<div style="display:flex;gap:5px;margin-top:7px"><button class="btn-p" style="font-size:10px;padding:2px 9px" onclick="markProm(\''+p.adminKey+'\',\''+p.id+'\');renderAlertas()">✓ Cobrado</button>'+
+    '<button class="btn-s" style="font-size:10px;padding:2px 9px" onclick="selCRM(\''+p.adminKey+'\');goPg(\'crm\')">Gestionar</button></div></div>';
+  }).join('')+'</div></div>' : '')+
+
+  (sinCrit.length ? '<div class="card" style="margin-bottom:11px"><div class="ch"><span class="ct">🚨 Mora crítica SIN actividad registrada ('+sinCrit.length+')</span></div><div class="cb">'+
+  '<div style="display:flex;flex-direction:column;gap:5px">'+
+  sinCrit.map(function(a){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">'+
+    '<div><div style="font-size:12px;font-weight:600">'+a.short+'</div><div style="font-size:11px;color:var(--text3)">'+fmt(a.saldo)+' · '+a.maxDias+'d mora</div></div>'+
+    '<button class="btn-p" style="font-size:10.5px;padding:3px 11px" onclick="selCRM(\''+a.nombre+'\');setCRMTab(\'nueva\',\''+a.nombre+'\');goPg(\'crm\')">Iniciar gestión</button>'+
+    '</div>';
+  }).join('')+'</div></div></div>' : '')+
+
+  (sinReciente.length ? '<div class="card" style="margin-bottom:11px"><div class="ch"><span class="ct">📅 Sin actividad en los últimos 7 días ('+sinReciente.length+')</span></div><div class="cb">'+
+  '<div style="display:flex;flex-direction:column;gap:5px">'+
+  sinReciente.map(function(a){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">'+
+    '<div><div style="font-size:12px;font-weight:600">'+a.short+'</div><div style="font-size:11px;color:var(--text3)">'+fmt(a.saldo)+' · '+a.maxDias+'d mora</div></div>'+
+    '<button class="btn-s" style="font-size:10.5px;padding:3px 11px" onclick="selCRM(\''+a.nombre+'\');goPg(\'crm\')">Ver cartera</button>'+
+    '</div>';
+  }).join('')+'</div></div></div>' : '');
+}
+
+function doneRemA(id) {
+  var rems=remLoad(), r=rems.find(function(x){return x.id===id;});
+  if(r) r.done=true;
+  remSave(rems);
+  renderAlertas();
+  updateAlertBadge();
+}
+
+// ═══════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════
+function exportCRM() {
+  var crm=crmLoad();
+  var rows=[['Admin','Tipo','Fecha','Hora','Consorcio','Nota','Resultado','Responsable']];
+  Object.entries(crm).forEach(function(kv){
+    var short=shortAdmin(kv[0]);
+    (kv[1].activities||[]).forEach(function(a){
+      rows.push([short, ACT[a.type]?ACT[a.type].lbl:a.type, a.date||'', a.time||'', a.consorcio||'', a.note||'', a.result||'', a.resp||'']);
+    });
+  });
+  var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download='gestion_cobranzas_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════
+// ═══════════════════════════════════════
+// CONFIGURACIÓN
+// ═══════════════════════════════════════
+var CFG_KEY = 'gestionar_cfg_v1';
+var MAILS_KEY = 'gestionar_mails_v1';
+var TOKEN_KEY = 'gestionar_gtoken_v1';
+
+function cfgLoad() { try { return JSON.parse(localStorage.getItem(CFG_KEY)||'{}'); } catch(e) { return {}; } }
+function cfgSave(d) { localStorage.setItem(CFG_KEY, JSON.stringify(d)); }
+function mailsLoad() { try { return JSON.parse(localStorage.getItem(MAILS_KEY)||'{}'); } catch(e) { return {}; } }
+function mailsSave(d) { localStorage.setItem(MAILS_KEY, JSON.stringify(d)); }
+function tokenLoad() { try { return JSON.parse(localStorage.getItem(TOKEN_KEY)||'null'); } catch(e) { return null; } }
+function tokenSave(t) { if (t) { localStorage.setItem(TOKEN_KEY, JSON.stringify(t)); } else { localStorage.removeItem(TOKEN_KEY); } }
+
+function loadConfigPage() {
+  var cfg = cfgLoad();
+  var el;
+  el = document.getElementById('cfg-client-id'); if (el && cfg.clientId) el.value = cfg.clientId;
+  el = document.getElementById('cfg-client-secret'); if (el && cfg.clientSecret) el.value = cfg.clientSecret;
+  el = document.getElementById('cfg-odoo-url'); if (el && cfg.odooUrl) el.value = cfg.odooUrl;
+  el = document.getElementById('cfg-odoo-db'); if (el && cfg.odooDB) el.value = cfg.odooDB;
+  el = document.getElementById('cfg-odoo-user'); if (el && cfg.odooUser) el.value = cfg.odooUser;
+  el = document.getElementById('cfg-odoo-key'); if (el && cfg.odooKey) el.value = cfg.odooKey;
+  updateGmailStatus();
+  renderMailsPreview();
+}
+
+function saveGmailConfig() {
+  var cfg = cfgLoad();
+  cfg.clientId = (document.getElementById('cfg-client-id').value || '').trim();
+  cfg.clientSecret = (document.getElementById('cfg-client-secret').value || '').trim();
+  cfgSave(cfg);
+  updateGmailStatus();
+  alert('Credenciales Gmail guardadas. Ahora hacé click en Autorizar Gmail.');
+}
+
+function saveOdooConfig() {
+  var cfg = cfgLoad();
+  var url = (document.getElementById('cfg-odoo-url').value || '').trim();
+  cfg.odooUrl = url.replace(/\/$/, '');
+  cfg.odooDB  = (document.getElementById('cfg-odoo-db').value || '').trim();
+  cfg.odooUser = (document.getElementById('cfg-odoo-user').value || '').trim();
+  cfg.odooKey = (document.getElementById('cfg-odoo-key').value || '').trim();
+  cfgSave(cfg);
+  alert('Configuración Odoo guardada.');
+}
+
+function updateGmailStatus() {
+  var token = tokenLoad();
+  var cfg = cfgLoad();
+  var isOk = token && token.access_token && token.expiry > Date.now();
+  var hasCfg = cfg.clientId && cfg.clientSecret;
+  var html;
+  if (isOk) {
+    html = '<span class="oauth-status oauth-ok">Gmail autorizado' + (token.email ? ' — ' + token.email : '') + '</span>';
+  } else if (hasCfg) {
+    html = '<span class="oauth-status oauth-wait">Sin autorizar — click en Autorizar Gmail</span>';
+  } else {
+    html = '<span class="oauth-status oauth-no">Sin configurar</span>';
+  }
+  var b1 = document.getElementById('gmail-status');
+  var b2 = document.getElementById('oauth-status-bar');
+  if (b1) b1.innerHTML = html;
+  if (b2) b2.innerHTML = html;
+}
+
+// ─────────────────────────────────────
+// GMAIL OAUTH 2.0 - PKCE
+// ─────────────────────────────────────
+function startOAuth() {
+  var cfg = cfgLoad();
+  if (!cfg.clientId) { alert('Primero ingresá el Client ID y hacé click en Guardar.'); return; }
+  if (!cfg.clientSecret) { alert('Primero ingresá el Client Secret y hacé click en Guardar.'); return; }
+
+  // Generate PKCE verifier
+  var arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  var verifier = btoa(String.fromCharCode.apply(null, arr));
+  verifier = verifier.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  localStorage.setItem('pkce_v', verifier);
+
+  var data = new TextEncoder().encode(verifier);
+  crypto.subtle.digest('SHA-256', data).then(function(buf) {
+    var bytes = new Uint8Array(buf);
+    var challenge = btoa(String.fromCharCode.apply(null, bytes));
+    challenge = challenge.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    var params = [
+      'client_id=' + encodeURIComponent(cfg.clientId),
+      'redirect_uri=' + encodeURIComponent('https://localhost'),
+      'response_type=code',
+      'scope=' + encodeURIComponent('https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email'),
+      'access_type=offline',
+      'prompt=consent',
+      'code_challenge=' + encodeURIComponent(challenge),
+      'code_challenge_method=S256'
+    ].join('&');
+    var url = 'https://accounts.google.com/o/oauth2/v2/auth?' + params;
+
+    // Open Google auth in a new tab (more reliable than popup)
+    window.open(url, '_blank', 'width=520,height=660');
+
+    // Show instruction to come back and paste URL
+    setTimeout(function() { showOAuthModal(); }, 1500);
+  });
+}
+
+function showOAuthModal() {
+  var modal = document.getElementById('oauth-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+    var inp = document.getElementById('oauth-url-input');
+    if (inp) { inp.value = ''; inp.focus(); }
+    var err = document.getElementById('oauth-modal-err');
+    if (err) { err.style.display = 'none'; }
+  }
+}
+
+function closeOAuthModal() {
+  var modal = document.getElementById('oauth-modal');
+  if (modal) { modal.style.display = 'none'; }
+}
+
+function processOAuthUrl() {
+  var inp = document.getElementById('oauth-url-input');
+  var errEl = document.getElementById('oauth-modal-err');
+  var urlStr = (inp ? inp.value : '').trim();
+  if (!urlStr) {
+    if (errEl) { errEl.textContent = 'Pegá la URL primero.'; errEl.style.display = 'block'; }
+    return;
+  }
+  try {
+    // Accept both http://localhost and https://localhost
+    if (urlStr.indexOf('localhost') < 0) {
+      if (errEl) { errEl.textContent = 'La URL debe contener "localhost". Copiá la URL completa de la barra de direcciones.'; errEl.style.display = 'block'; }
+      return;
+    }
+    // Normalize: some browsers show http://localhost/?code=...
+    var normalized = urlStr.replace('http://localhost', 'https://localhost');
+    var urlObj = new URL(normalized);
+    var code = urlObj.searchParams.get('code');
+    var errorParam = urlObj.searchParams.get('error');
+    if (errorParam) {
+      if (errEl) { errEl.textContent = 'Google devolvió un error: ' + errorParam + '. Intentá de nuevo.'; errEl.style.display = 'block'; }
+      return;
+    }
+    if (!code) {
+      if (errEl) { errEl.textContent = 'No se encontró el código de autorización en la URL. Asegurate de copiar la URL completa.'; errEl.style.display = 'block'; }
+      return;
+    }
+    closeOAuthModal();
+    var cfg = cfgLoad();
+    exchangeCode(code, cfg);
+  } catch(e) {
+    if (errEl) { errEl.textContent = 'URL inválida: ' + e.message; errEl.style.display = 'block'; }
+  }
+}
+
+function exchangeCode(code, cfg) {
+  var verifier = localStorage.getItem('pkce_v');
+  var body = [
+    'code=' + encodeURIComponent(code),
+    'client_id=' + encodeURIComponent(cfg.clientId),
+    'client_secret=' + encodeURIComponent(cfg.clientSecret),
+    'redirect_uri=' + encodeURIComponent('https://localhost'),
+    'grant_type=authorization_code',
+    'code_verifier=' + encodeURIComponent(verifier)
+  ].join('&');
+  fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.access_token) {
+      var token = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token || null,
+        expiry: Date.now() + (data.expires_in - 60) * 1000
+      };
+      fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { 'Authorization': 'Bearer ' + data.access_token }
+      }).then(function(r) { return r.json(); }).then(function(u) {
+        token.email = u.email || '';
+        tokenSave(token);
+        updateGmailStatus();
+        alert('Gmail autorizado como: ' + token.email);
+      }).catch(function() {
+        tokenSave(token);
+        updateGmailStatus();
+        alert('Gmail autorizado correctamente.');
+      });
+    } else {
+      alert('Error al autorizar: ' + (data.error_description || data.error || JSON.stringify(data)));
+    }
+  }).catch(function(e) { alert('Error de red: ' + e.message); });
+}
+
+function getValidToken() {
+  var token = tokenLoad();
+  if (!token) { return Promise.reject('Sin token. Autorizá Gmail en Configuración.'); }
+  if (token.expiry > Date.now()) { return Promise.resolve(token.access_token); }
+  var cfg = cfgLoad();
+  if (!token.refresh_token) { return Promise.reject('Token expirado. Volvé a autorizar Gmail.'); }
+  return fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: [
+      'client_id=' + encodeURIComponent(cfg.clientId),
+      'client_secret=' + encodeURIComponent(cfg.clientSecret),
+      'refresh_token=' + encodeURIComponent(token.refresh_token),
+      'grant_type=refresh_token'
+    ].join('&')
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.access_token) {
+      token.access_token = data.access_token;
+      token.expiry = Date.now() + (data.expires_in - 60) * 1000;
+      tokenSave(token);
+      return data.access_token;
+    }
+    throw new Error(data.error_description || 'Error al refrescar token');
+  });
+}
+
+function revokeOAuth() {
+  if (!confirm('Desconectar cuenta Gmail?')) { return; }
+  tokenSave(null);
+  updateGmailStatus();
+  alert('Gmail desconectado.');
+}
+
+// ─────────────────────────────────────
+// ODOO API
+// ─────────────────────────────────────
+function odooCall(model, method, args, kwargs) {
+  var cfg = cfgLoad();
+  if (!cfg.odooUrl || !cfg.odooKey) { return Promise.reject('Configurá Odoo primero.'); }
+  var payload = {
+    jsonrpc: '2.0', method: 'call', id: Date.now(),
+    params: {
+      model: model, method: method,
+      args: args || [],
+      kwargs: Object.assign({ context: {} }, kwargs || {})
+    }
+  };
+  return fetch(cfg.odooUrl + '/web/dataset/call_kw', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(function(r) { return r.json(); }).then(function(res) {
+    if (res.error) { throw new Error(res.error.data ? res.error.data.message : JSON.stringify(res.error)); }
+    return res.result;
+  });
+}
+
+function testOdoo() {
+  var el = document.getElementById('odoo-test-result');
+  el.innerHTML = '<span style="color:var(--amber)">Probando...</span>';
+  saveOdooConfig();
+  var cfg = cfgLoad();
+  fetch(cfg.odooUrl + '/web/session/authenticate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { db: cfg.odooDB, login: cfg.odooUser, password: cfg.odooKey } })
+  }).then(function(r) { return r.json(); }).then(function(res) {
+    if (res.result && res.result.uid) {
+      el.innerHTML = '<span style="color:var(--green)">Conexion exitosa. UID: ' + res.result.uid + '</span>';
+    } else {
+      el.innerHTML = '<span style="color:var(--red)">Credenciales incorrectas</span>';
+    }
+  }).catch(function(e) {
+    el.innerHTML = '<span style="color:var(--red)">Error: ' + e.message + '</span>';
+  });
+}
+
+function odooGetInvoicePDF(invoiceNumber) {
+  var cfg = cfgLoad();
+  return odooCall('account.move', 'search_read',
+    [[['name', '=', invoiceNumber]]],
+    { fields: ['id', 'name'], limit: 1 }
+  ).then(function(records) {
+    if (!records || !records.length) { throw new Error('Factura no encontrada: ' + invoiceNumber); }
+    var invoiceId = records[0].id;
+    return fetch(cfg.odooUrl + '/report/pdf/account.report_invoice/' + invoiceId, {
+      method: 'GET',
+      credentials: 'include'
+    });
+  }).then(function(r) {
+    if (!r.ok) { throw new Error('Error PDF ' + r.status); }
+    return r.arrayBuffer();
+  }).then(function(buf) {
+    var bytes = new Uint8Array(buf);
+    var binary = '';
+    var len = bytes.byteLength;
+    for (var i = 0; i < len; i++) { binary += String.fromCharCode(bytes[i]); }
+    return btoa(binary);
+  });
+}
+
+// ─────────────────────────────────────
+// MAILS FILE
+// ─────────────────────────────────────
+function loadMailsFile(file) {
+  if (!file) { return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var mails = {};
+      var name = file.name.toLowerCase();
+      if (name.indexOf('.csv') >= 0) {
+        var text = e.target.result;
+        var sep = '\n';
+        var lines = text.split(sep);
+        if (lines.length === 1) { lines = text.split('\r'); }
+        lines = lines.filter(function(l) { return l.trim(); });
+        var header = lines[0].toLowerCase().split(',').map(function(h) { return h.trim().replace(/"/g, ''); });
+        var ai = header.indexOf('admin');
+        var ei = header.indexOf('email');
+        if (ai < 0 || ei < 0) { alert('El CSV necesita columnas "admin" y "email".'); return; }
+        for (var i = 1; i < lines.length; i++) {
+          var cols = lines[i].split(',').map(function(c) { return c.trim().replace(/"/g, ''); });
+          if (cols[ai] && cols[ei]) { mails[cols[ai].toLowerCase()] = cols[ei].toLowerCase(); }
+        }
+      } else {
+        var wb = XLSX.read(e.target.result, { type: 'array' });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var raw = XLSX.utils.sheet_to_json(ws, { raw: false, defval: '' });
+        if (!raw.length) { alert('Archivo vacio.'); return; }
+        var keys = Object.keys(raw[0]);
+        var aiKey = null, emKey = null;
+        keys.forEach(function(k) {
+          if (k.toLowerCase() === 'admin') { aiKey = k; }
+          if (k.toLowerCase() === 'email') { emKey = k; }
+        });
+        if (!aiKey || !emKey) { alert('El Excel necesita columnas "admin" y "email".'); return; }
+        raw.forEach(function(r) {
+          if (r[aiKey] && r[emKey]) { mails[r[aiKey].toLowerCase()] = r[emKey].toLowerCase(); }
+        });
+      }
+      mailsSave(mails);
+      var n = Object.keys(mails).length;
+      var el = document.getElementById('mails-load-status');
+      if (el) { el.textContent = n + ' mails cargados'; }
+      renderMailsPreview();
+      alert(n + ' mails cargados correctamente.');
+    } catch(err) { alert('Error al leer el archivo: ' + err.message); }
+  };
+  if (file.name.toLowerCase().indexOf('.csv') >= 0) {
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function renderMailsPreview() {
+  var mails = mailsLoad();
+  var cont = document.getElementById('mails-preview');
+  if (!cont) { return; }
+  var entries = Object.entries(mails);
+  if (!entries.length) { cont.innerHTML = '<div style="font-size:12px;color:var(--text3)">Sin mails cargados.</div>'; return; }
+  var rows = entries.slice(0, 50).map(function(kv) {
+    return '<tr><td>' + kv[0] + '</td><td style="color:var(--blue)">' + kv[1] + '</td></tr>';
+  }).join('');
+  if (entries.length > 50) { rows += '<tr><td colspan="2" style="color:var(--text3);text-align:center">... y ' + (entries.length - 50) + ' mas</td></tr>'; }
+  cont.innerHTML = '<div style="font-size:11px;color:var(--text2);margin-bottom:6px">' + entries.length + ' administraciones con mail</div>' +
+    '<div class="tw" style="max-height:180px;overflow-y:auto"><table class="tbl"><thead><tr><th>Administración</th><th>Email</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+function downloadMailsTemplate() {
+  var csv = '"admin","email"\n"ABG ADMINISTRACION SRL","contacto@abg.com.ar"\n"ARMATA S.R.L.","admin@armata.com.ar"';
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'plantilla_mails_admins.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function getAdminMail(adminNombre) {
+  // Priority: 1) user-edited localStorage, 2) built-in Excel, 3) fuzzy match
+  var mails = mailsLoad();
+  var full = adminNombre.toLowerCase();
+  var short = shortAdmin(adminNombre).toLowerCase();
+
+  // 1. Check localStorage overrides first (user edits take priority)
+  if (mails[full]) { return mails[full]; }
+  if (mails[short]) { return mails[short]; }
+  var keys = Object.keys(mails);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    if (full.indexOf(k) >= 0 || k.indexOf(short) >= 0 || short.indexOf(k) >= 0) { return mails[k]; }
+  }
+
+  // 2. Check built-in mails from Excel (case-insensitive)
+  var bKeys = Object.keys(MAILS_BUILTIN);
+  for (var j = 0; j < bKeys.length; j++) {
+    var bk = bKeys[j].toLowerCase();
+    if (bk === full || bk === short || full.indexOf(bk) >= 0 || bk.indexOf(short) >= 0 || short.indexOf(bk) >= 0) {
+      return MAILS_BUILTIN[bKeys[j]];
+    }
+  }
+  return '';
+}
+
+function getAdminPhone(adminNombre) {
+  // Returns phone from PHONES_BUILTIN (loaded from Odoo)
+  if (typeof PHONES_BUILTIN === 'undefined') { return ''; }
+  var full = adminNombre.toLowerCase();
+  var short = shortAdmin(adminNombre).toLowerCase();
+  var keys = Object.keys(PHONES_BUILTIN);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i].toLowerCase();
+    if (k === full || k === short || full.indexOf(k) >= 0 || k.indexOf(short) >= 0) {
+      return PHONES_BUILTIN[keys[i]];
+    }
+  }
+  return '';
+}
+
+// ─────────────────────────────────────
+// ENVÍO MASIVO PAGE
+// ─────────────────────────────────────
+var envioSelected = {};
+
+function renderEnvioPage() {
+  var cfg = cfgLoad();
+  var hasConfig = !!(cfg.clientId && cfg.odooUrl);
+  var noEl = document.getElementById('envio-no-config');
+  var mainEl = document.getElementById('envio-main');
+  if (noEl) { noEl.style.display = hasConfig ? 'none' : 'block'; }
+  if (mainEl) { mainEl.style.display = hasConfig ? 'block' : 'none'; }
+  updateGmailStatus();
+  var rf = document.getElementById('env-resp');
+  if (rf && rf.options.length <= 1) {
+    getResps().forEach(function(r) {
+      var o = document.createElement('option'); o.value = r.nombre; o.textContent = r.nombre; rf.appendChild(o);
+    });
+  }
+  renderEnvioList();
+}
+
+function renderEnvioList() {
+  var q = (document.getElementById('env-q') ? document.getElementById('env-q').value : '').toLowerCase();
+  var resp = document.getElementById('env-resp') ? document.getElementById('env-resp').value : '';
+  var sem = document.getElementById('env-sem') ? document.getElementById('env-sem').value : '';
+  var admins = getAdmins().filter(function(a) {
+    var sc = semColor(a.maxDias);
+    return (!q || a.short.toLowerCase().indexOf(q) >= 0) &&
+           (!resp || a.resps.indexOf(resp) >= 0) &&
+           (!sem || sc === sem);
+  });
+  var selCount = 0;
+  Object.keys(envioSelected).forEach(function(k) { if (envioSelected[k]) { selCount++; } });
+  var scEl = document.getElementById('sel-count');
+  if (scEl) { scEl.textContent = selCount + ' seleccionada' + (selCount !== 1 ? 's' : ''); }
+  var listEl = document.getElementById('envio-list');
+  if (!listEl) { return; }
+  listEl.innerHTML = admins.map(function(a) {
+    var email = getAdminMail(a.nombre);
+    var sc = semColor(a.maxDias);
+    var isSel = !!envioSelected[a.nombre];
+    var idx2 = getAdmins().indexOf(a);
+    return '<div class="ac-item" onclick="toggleEnvioIdx(' + idx2 + ')">' +
+      '<div class="ac-chk' + (isSel ? ' on' : '') + '">' + (isSel ? '&#10003;' : '') + '</div>' +
+      '<span class="ac-sem" style="background:' + semHex(sc) + '"></span>' +
+      '<div class="ac-info">' +
+      '<div class="ac-name">' + a.short + '</div>' +
+      '<div class="ac-meta">' + fmt(a.saldo) + ' &middot; ' + a.count + ' factura' + (a.count !== 1 ? 's' : '') + ' &middot; ' + a.maxDias + 'd mora</div>' +
+      (email ? '<div class="ac-email">' + email + '</div>' : '<div class="ac-email" style="color:var(--red)">Sin mail asignado</div>') +
+      '</div></div>';
+  '<div class="ac-chk' + (isSel ? ' on' : '') + '">' + (isSel ? '&#10003;' : '') + '</div>' +
+      '<span class="ac-sem" style="background:' + semHex(sc) + '"></span>' +
+      '<div class="ac-info">' +
+      '<div class="ac-name">' + a.short + '</div>' +
+      '<div class="ac-meta">' + fmt(a.saldo) + ' &middot; ' + a.count + ' factura' + (a.count !== 1 ? 's' : '') + ' &middot; ' + a.maxDias + 'd mora</div>' +
+      (email
+        ? '<div class="ac-email">' + email + '</div>'
+        : '<div class="ac-email" style="color:var(--red)">Sin mail asignado</div>') +
+      '</div></div>';
+  }).join('');
+  updateEnvioSummary();
+}
+
+function toggleEnvioIdx(idx) {
+  var admins = getAdmins();
+  if (admins[idx]) { toggleEnvioSel(admins[idx].nombre); }
+}
+function toggleEnvioSel(adminNombre) {
+  envioSelected[adminNombre] = !envioSelected[adminNombre];
+  renderEnvioList();
+}
+
+function selAll(val) {
+  getAdmins().forEach(function(a) { envioSelected[a.nombre] = val; });
+  renderEnvioList();
+}
+
+function selSoloSinMail() {
+  getAdmins().forEach(function(a) { envioSelected[a.nombre] = !getAdminMail(a.nombre); });
+  renderEnvioList();
+}
+
+function updateEnvioSummary() {
+  var sel = getAdmins().filter(function(a) { return envioSelected[a.nombre]; });
+  var conMail = sel.filter(function(a) { return getAdminMail(a.nombre); });
+  var sinMail = sel.filter(function(a) { return !getAdminMail(a.nombre); });
+  var totalSaldo = sel.reduce(function(s, a) { return s + a.saldo; }, 0);
+  var btn = document.getElementById('btn-send-all');
+  var body = document.getElementById('envio-summary-body');
+  if (body) {
+    body.innerHTML =
+      '<div style="display:flex;flex-direction:column;gap:6px">' +
+      '<div style="display:flex;justify-content:space-between;font-size:12px"><span>Seleccionadas</span><strong>' + sel.length + '</strong></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:12px"><span>Con mail</span><strong style="color:var(--green)">' + conMail.length + '</strong></div>' +
+      (sinMail.length ? '<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--red)">Sin mail</span><strong style="color:var(--red)">' + sinMail.length + '</strong></div>' : '') +
+      '<div style="display:flex;justify-content:space-between;font-size:12px"><span>Total a cobrar</span><strong style="color:var(--red)">' + fmt(totalSaldo) + '</strong></div>' +
+      '</div>';
+  }
+  if (btn) {
+    btn.disabled = conMail.length === 0;
+    btn.textContent = conMail.length > 0
+      ? 'Enviar ' + conMail.length + ' mail' + (conMail.length !== 1 ? 's' : '')
+      : 'Selecciona administraciones con mail';
+  }
+}
+
+// ─────────────────────────────────────
+// GMAIL SEND
+// ─────────────────────────────────────
+function buildMailHTML(admin) {
+  var rows = [].concat(admin.rows).sort(function(a, b) { return b.dias - a.dias; });
+  var sc = semColor(admin.maxDias);
+  var resp = admin.resps.filter(function(r) { return r !== 'Sin asignar'; }).join(', ') || 'Departamento de Cobranzas';
+  var cuerpo, accion;
+  if (sc === 'verde') {
+    cuerpo = 'Les informamos ' + admin.count + ' comprobante' + (admin.count !== 1 ? 's' : '') + ' pendientes por ' + fmt(admin.saldo) + '.';
+    accion = 'Les solicitamos abonar dentro de los plazos acordados para evitar recargos.';
+  } else if (sc === 'amarillo') {
+    cuerpo = 'Registramos saldos vencidos por ' + fmt(admin.saldo) + ' con mora de hasta ' + admin.maxDias + ' dias. Requiere atención.';
+    accion = 'Solicitamos contactarse a la brevedad para coordinar el pago o un plan de regularizacion.';
+  } else {
+    cuerpo = 'URGENTE: Deuda vencida de ' + fmt(admin.saldo) + ' con ' + admin.maxDias + ' dias de mora. Situacion critica.';
+    accion = 'Solicitamos regularizar en los proximos 5 dias habiles o el expediente sera derivado al area legal.';
+  }
+  var tableRows = rows.map(function(r) {
+    var color = r.dias > 60 ? '#c0392b' : r.dias > 30 ? '#b8680a' : '#333';
+    return '<tr style="border-bottom:1px solid #eee">' +
+      '<td style="padding:5px 8px;font-size:11px;font-family:monospace">' + r.num + '</td>' +
+      '<td style="padding:5px 8px;font-size:11px">' + r.cliente + '</td>' +
+      '<td style="padding:5px 8px;font-size:11px">' + r.producto + '</td>' +
+      '<td style="padding:5px 8px;font-size:11px">' + r.fechaVenc + '</td>' +
+      '<td style="padding:5px 8px;font-size:11px;text-align:center;color:' + color + '">' + r.dias + 'd</td>' +
+      '<td style="padding:5px 8px;font-size:11px;text-align:right;font-weight:600;color:#c0392b">' + fmt(r.saldo) + '</td>' +
+      '</tr>';
+  }).join('');
+  return '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;color:#333;max-width:800px;margin:0 auto;padding:20px">' +
+    '<div style="border-bottom:3px solid #1a3a2a;padding-bottom:12px;margin-bottom:20px">' +
+    '<h2 style="font-size:18px;color:#1a3a2a;margin:0">Estado de cuenta de sus consorcios</h2>' +
+    '<p style="font-size:12px;color:#666;margin:4px 0 0">' + TODAY_S + ' &middot; Responsable: ' + resp + '</p>' +
+    '</div>' +
+    '<p>Estimados se&ntilde;ores <strong>' + admin.short + '</strong>,</p>' +
+    '<p style="margin-top:10px">' + cuerpo + '</p>' +
+    '<h3 style="font-size:13px;color:#555;margin:16px 0 8px;text-transform:uppercase;letter-spacing:.5px">Detalle de cuenta corriente</h3>' +
+    '<table style="width:100%;border-collapse:collapse">' +
+    '<thead><tr style="background:#f5f5f5">' +
+    '<th style="padding:6px 8px;text-align:left;font-size:11px">N Factura</th>' +
+    '<th style="padding:6px 8px;text-align:left;font-size:11px">Consorcio</th>' +
+    '<th style="padding:6px 8px;text-align:left;font-size:11px">Producto</th>' +
+    '<th style="padding:6px 8px;text-align:left;font-size:11px">Vencimiento</th>' +
+    '<th style="padding:6px 8px;text-align:center;font-size:11px">Dias mora</th>' +
+    '<th style="padding:6px 8px;text-align:right;font-size:11px">Saldo</th>' +
+    '</tr></thead><tbody>' + tableRows + '</tbody>' +
+    '<tfoot><tr style="background:#f5f5f5">' +
+    '<td colspan="5" style="padding:6px 8px;font-weight:700">Total adeudado</td>' +
+    '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#c0392b">' + fmt(admin.saldo) + '</td>' +
+    '</tr></tfoot></table>' +
+    '<p style="margin-top:16px">' + accion + '</p>' +
+    '<p style="margin-top:16px">Quedamos a disposicion.<br><strong>' + resp + '</strong><br>' +
+    '<em style="font-size:11px;color:#999">Departamento de Cobranzas</em></p>' +
+    '</body></html>';
+}
+
+function buildMimeMessage(to, from, subject, htmlBody, attachments) {
+  var boundary = 'bnd_' + Date.now().toString(36);
+  var lines = [];
+  lines.push('MIME-Version: 1.0');
+  lines.push('From: ' + from);
+  lines.push('To: ' + to);
+  var encSubject = btoa(unescape(encodeURIComponent(subject)));
+  lines.push('Subject: =?UTF-8?B?' + encSubject + '?=');
+  if (attachments && attachments.length) {
+    lines.push('Content-Type: multipart/mixed; boundary="' + boundary + '"');
+    lines.push('');
+    lines.push('--' + boundary);
+    lines.push('Content-Type: text/html; charset=UTF-8');
+    lines.push('Content-Transfer-Encoding: base64');
+    lines.push('');
+    lines.push(btoa(unescape(encodeURIComponent(htmlBody))));
+    for (var i = 0; i < attachments.length; i++) {
+      var att = attachments[i];
+      lines.push('');
+      lines.push('--' + boundary);
+      lines.push('Content-Type: ' + att.mimeType + '; name="' + att.filename + '"');
+      lines.push('Content-Transfer-Encoding: base64');
+      lines.push('Content-Disposition: attachment; filename="' + att.filename + '"');
+      lines.push('');
+      lines.push(att.data);
+    }
+    lines.push('');
+    lines.push('--' + boundary + '--');
+  } else {
+    lines.push('Content-Type: text/html; charset=UTF-8');
+    lines.push('Content-Transfer-Encoding: base64');
+    lines.push('');
+    lines.push(btoa(unescape(encodeURIComponent(htmlBody))));
+  }
+  var raw = lines.join('\r\n');
+  var encoded = btoa(unescape(encodeURIComponent(raw)));
+  encoded = encoded.replace(/\+/g, '-').replace(/\//g, '_');
+  var eqIdx = encoded.indexOf('=');
+  if (eqIdx > 0) { encoded = encoded.slice(0, eqIdx); }
+  return encoded;
+}
+
+function sendGmailMsg(accessToken, rawMsg) {
+  return fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ raw: rawMsg })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.id) { return data; }
+    throw new Error(data.error ? data.error.message : JSON.stringify(data));
+  });
+}
+
+function logEnvio(msg, type) {
+  var log = document.getElementById('envio-log');
+  if (!log) { return; }
+  if (log.firstChild && log.firstChild.style && log.firstChild.style.textAlign === 'center') {
+    log.innerHTML = '';
+  }
+  var el = document.createElement('div');
+  el.className = 'log-item log-' + type;
+  var icon = type === 'ok' ? '&#10003;' : type === 'err' ? '&#10007;' : type === 'wait' ? '&#9203;' : 'i';
+  el.innerHTML = '<span>' + icon + '</span><span>' + msg + '</span>';
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+var envioRunning = false;
+
+function startEnvio() {
+  if (envioRunning) { return; }
+  var token = tokenLoad();
+  if (!token || !token.access_token || token.expiry <= Date.now()) {
+    alert('Tu sesion Gmail expiró. Volvé a Configuración y autorizá Gmail.');
+    return;
+  }
+  var sel = getAdmins().filter(function(a) {
+    return envioSelected[a.nombre] && getAdminMail(a.nombre);
+  });
+  if (!sel.length) { alert('No hay administraciones seleccionadas con mail asignado.'); return; }
+  if (!confirm('Enviar ' + sel.length + ' mail' + (sel.length !== 1 ? 's' : '') + ' ahora?')) { return; }
+  var adjuntar = document.getElementById('opt-adjuntar') && document.getElementById('opt-adjuntar').checked;
+  var ccMismo = document.getElementById('opt-cc') && document.getElementById('opt-cc').checked;
+  var registrar = document.getElementById('opt-registro') ? document.getElementById('opt-registro').checked : true;
+  var subjectBase = (document.getElementById('opt-subject') ? document.getElementById('opt-subject').value : 'Estado de cuenta de sus consorcios').trim();
+  var senderEmail = token.email || '';
+  envioRunning = true;
+  var btnEl = document.getElementById('btn-send-all');
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Enviando...'; }
+  var progEl = document.getElementById('envio-progress');
+  if (progEl) { progEl.style.display = 'block'; }
+  var pbar = document.getElementById('envio-pbar');
+  if (pbar) { pbar.style.width = '0%'; }
+  logEnvio('Iniciando envio de ' + sel.length + ' mails...', 'info');
+  var done = 0, errors = 0;
+
+  function sendNext(idx) {
+    if (idx >= sel.length) {
+      envioRunning = false;
+      if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Enviar seleccionados'; }
+      if (pbar) { pbar.style.width = '100%'; }
+      var progLbl = document.getElementById('envio-prog-lbl');
+      if (progLbl) { progLbl.textContent = 'Completado: ' + done + ' enviados, ' + errors + ' errores.'; }
+      logEnvio('Finalizado. ' + done + ' enviados, ' + errors + ' errores.', done > 0 ? 'ok' : 'err');
+      return;
+    }
+    var admin = sel[idx];
+    var email = getAdminMail(admin.nombre);
+    var subject = subjectBase + ' ' + TODAY_S;
+    var pctVal = Math.round((idx / sel.length) * 100);
+    if (pbar) { pbar.style.width = pctVal + '%'; }
+    var progLbl = document.getElementById('envio-prog-lbl');
+    if (progLbl) { progLbl.textContent = (idx + 1) + '/' + sel.length + ' ' + admin.short; }
+    logEnvio('Enviando a ' + admin.short + ' <' + email + '>', 'wait');
+
+    getValidToken().then(function(accessToken) {
+      var htmlBody = buildMailHTML(admin);
+      var to = email;
+      if (ccMismo && senderEmail && senderEmail !== email) { to = email + ', ' + senderEmail; }
+
+      function doSend(atts) {
+        var raw = buildMimeMessage(to, senderEmail, subject, htmlBody, atts);
+        return sendGmailMsg(accessToken, raw);
+      }
+
+      var sendP;
+      if (adjuntar) {
+        var nums = admin.rows.map(function(r) { return r.num; });
+        var pdfPs = nums.map(function(num) {
+          return odooGetInvoicePDF(num).then(function(b64) {
+            var fname = num.replace(/[^a-zA-Z0-9\-]/g, '_') + '.pdf';
+            return { filename: fname, data: b64, mimeType: 'application/pdf' };
+          }).catch(function(e) {
+            logEnvio('  PDF no disponible: ' + num, 'wait');
+            return null;
+          });
+        });
+        sendP = Promise.all(pdfPs).then(function(atts) {
+          return doSend(atts.filter(function(a) { return a !== null; }));
+        });
+      } else {
+        sendP = doSend([]);
+      }
+
+      sendP.then(function() {
+        done++;
+        logEnvio(admin.short + ' enviado a ' + email, 'ok');
+        if (registrar) {
+          var crm = crmLoad();
+          if (!crm[admin.nombre]) { crm[admin.nombre] = { activities: [], promesas: [] }; }
+          crm[admin.nombre].activities.push({
+            id: Date.now().toString(36) + 'em',
+            type: 'mail', result: 'neutro',
+            note: 'Mail de cuenta corriente enviado a ' + email + '. Total: ' + fmt(admin.saldo) + (adjuntar ? ' con PDFs adjuntos.' : '.'),
+            date: new Date().toISOString().slice(0, 10),
+            resp: senderEmail, ts: Date.now()
+          });
+          crmSave(crm);
+        }
+        setTimeout(function() { sendNext(idx + 1); }, 900);
+      }).catch(function(e) {
+        errors++;
+        logEnvio('Error ' + admin.short + ': ' + e.message, 'err');
+        setTimeout(function() { sendNext(idx + 1); }, 900);
+      });
+    }).catch(function(e) {
+      errors++;
+      logEnvio('Error token: ' + e, 'err');
+      envioRunning = false;
+      if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Enviar seleccionados'; }
+    });
+  }
+  sendNext(0);
+}
+
+
+// ═══════════════════════════════════════
+// ADMIN PANEL
+// ═══════════════════════════════════════
+// Credentials stored as SHA-256 hash — never plain text
+var ADMIN_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918'; // admin:admin default
+var ADMIN_SESSION_KEY = 'gestionar_admin_session';
+
+// Change these defaults via the panel itself on first use
+// Hash = SHA-256 of "usuario:contraseña"
+// Default: user="admin" pass="gestionar2024"
+var ADMIN_USER_HASH = null; // loaded from localStorage
+var HARDCODED_HASH = null; // set during build if desired
+
+function sha256(str) {
+  var data = new TextEncoder().encode(str);
+  return crypto.subtle.digest('SHA-256', data).then(function(buf) {
+    return Array.from(new Uint8Array(buf)).map(function(b) {
+      return b.toString(16).padStart(2, '0');
+    }).join('');
+  });
+}
+
+function openAdmin() {
+  var overlay = document.getElementById('admin-overlay');
+  if (!overlay) { return; }
+  overlay.classList.add('open');
+  // Check if already authenticated this session
+  var sess = sessionStorage.getItem(ADMIN_SESSION_KEY);
+  if (sess === 'ok') {
+    showAdminConfig();
+  } else {
+    document.getElementById('admin-login-section').style.display = 'block';
+    document.getElementById('admin-config-section').style.display = 'none';
+    var userEl = document.getElementById('adm-user');
+    if (userEl) { userEl.focus(); }
+  }
+}
+
+function closeAdmin() {
+  var overlay = document.getElementById('admin-overlay');
+  if (overlay) { overlay.classList.remove('open'); }
+}
+
+function checkAdmin() {
+  var user = (document.getElementById('adm-user').value || '').trim();
+  var pass = (document.getElementById('adm-pass').value || '').trim();
+  if (!user || !pass) { showAdmErr('Completá usuario y contraseña.'); return; }
+
+  // Get stored credentials hash
+  var stored = localStorage.getItem('gestionar_admin_creds');
+  var errEl = document.getElementById('adm-err');
+
+  sha256(user + ':' + pass).then(function(hash) {
+    var valid = false;
+    if (stored) {
+      valid = (hash === stored);
+    } else {
+      // First time: accept default admin/gestionar2024
+      sha256('admin:gestionar2024').then(function(defaultHash) {
+        if (hash === defaultHash) {
+          // Save this as new credential
+          localStorage.setItem('gestionar_admin_creds', hash);
+          sessionStorage.setItem(ADMIN_SESSION_KEY, 'ok');
+          showAdminConfig();
+        } else {
+          showAdmErr('Usuario o contraseña incorrectos.');
+        }
+      });
+      return;
+    }
+    if (valid) {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, 'ok');
+      showAdminConfig();
+    } else {
+      showAdmErr('Usuario o contraseña incorrectos.');
+    }
+  });
+}
+
+function showAdmErr(msg) {
+  var el = document.getElementById('adm-err');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+function showAdminConfig() {
+  document.getElementById('admin-login-section').style.display = 'none';
+  document.getElementById('admin-config-section').style.display = 'block';
+  // Pre-fill existing values
+  var cfg = cfgLoad();
+  var el;
+  el = document.getElementById('adm-db'); if (el && cfg.odooDB) el.value = cfg.odooDB;
+  el = document.getElementById('adm-odoo-user'); if (el && cfg.odooUser) el.value = cfg.odooUser;
+  el = document.getElementById('adm-odoo-key'); if (el && cfg.odooKey) el.value = cfg.odooKey;
+  el = document.getElementById('adm-gmail-id'); if (el && cfg.clientId) el.value = cfg.clientId;
+  el = document.getElementById('adm-gmail-secret'); if (el && cfg.clientSecret) el.value = cfg.clientSecret;
+}
+
+function adminSaveOdoo() {
+  var cfg = cfgLoad();
+  var db = (document.getElementById('adm-db').value || '').trim();
+  var user = (document.getElementById('adm-odoo-user').value || '').trim();
+  var key = (document.getElementById('adm-odoo-key').value || '').trim();
+  if (!db || !user || !key) { alert('Completá todos los campos de Odoo.'); return; }
+  cfg.odooUrl = 'https://gestionar.adhoc.ar';
+  cfg.odooDB = db;
+  cfg.odooUser = user;
+  cfg.odooKey = key;
+  cfgSave(cfg);
+  var res = document.getElementById('adm-odoo-result');
+  if (res) { res.innerHTML = '<span style="color:var(--green)">✓ Guardado correctamente.</span>'; }
+}
+
+function adminTestOdoo() {
+  adminSaveOdoo();
+  var res = document.getElementById('adm-odoo-result');
+  if (res) { res.innerHTML = '<span style="color:var(--amber)">Probando...</span>'; }
+  var cfg = cfgLoad();
+  fetch(cfg.odooUrl + '/web/session/authenticate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { db: cfg.odooDB, login: cfg.odooUser, password: cfg.odooKey } })
+  }).then(function(r) { return r.json(); }).then(function(res2) {
+    if (res2.result && res2.result.uid) {
+      if (res) { res.innerHTML = '<span style="color:var(--green)">✓ Conexión exitosa con Odoo.</span>'; }
+    } else {
+      if (res) { res.innerHTML = '<span style="color:var(--red)">✗ Credenciales incorrectas.</span>'; }
+    }
+  }).catch(function(e) {
+    if (res) { res.innerHTML = '<span style="color:var(--red)">✗ Error de red: ' + e.message + '</span>'; }
+  });
+}
+
+function adminSaveGmail() {
+  var cfg = cfgLoad();
+  var id = (document.getElementById('adm-gmail-id').value || '').trim();
+  var secret = (document.getElementById('adm-gmail-secret').value || '').trim();
+  if (!id || !secret) { alert('Completá Client ID y Client Secret.'); return; }
+  cfg.clientId = id;
+  cfg.clientSecret = secret;
+  cfgSave(cfg);
+  alert('✓ Credenciales Gmail guardadas. El ejecutivo ahora puede hacer click en "Autorizar Gmail".');
+  updateGmailStatus();
+}
+
+function adminLogout() {
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  document.getElementById('admin-login-section').style.display = 'block';
+  document.getElementById('admin-config-section').style.display = 'none';
+  document.getElementById('adm-user').value = '';
+  document.getElementById('adm-pass').value = '';
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+  var overlay = document.getElementById('admin-overlay');
+  if (overlay && e.target === overlay) { closeAdmin(); }
+});
+
+// ═══════════════════════════════════════
+// CARGAR DATOS DESDE ODOO
+// ═══════════════════════════════════════
+var ODOO_URL = 'https://gestionar.adhoc.ar';
+
+function loadFromOdoo() {
+  var cfg = cfgLoad();
+  if (!cfg.odooDB || !cfg.odooUser || !cfg.odooKey) {
+    alert('Primero configurá las credenciales de Odoo (click en el boton ⚙ abajo a la derecha).');
+    return;
+  }
+
+  var btn = document.getElementById('btn-load-odoo');
+  if (btn) { btn.textContent = '⏳ Conectando...'; btn.disabled = true; }
+
+  // Step 1: authenticate to get session
+  fetch(ODOO_URL + '/web/session/authenticate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      jsonrpc: '2.0', method: 'call',
+      params: { db: cfg.odooDB, login: cfg.odooUser, password: cfg.odooKey }
+    })
+  }).then(function(r) { return r.json(); }).then(function(res) {
+    if (!res.result || !res.result.uid) {
+      throw new Error('Credenciales incorrectas. Verificá en el panel admin.');
+    }
+    if (btn) { btn.textContent = '⏳ Cargando facturas...'; }
+    return fetchAllInvoices(cfg, 0, []);
+  }).then(function(allRows) {
+    DATA = allRows;
+    if (!DATA.length) { throw new Error('No se encontraron facturas pendientes.'); }
+    onLoaded('Odoo — ' + DATA.length + ' facturas al ' + TODAY_S);
+    if (btn) { btn.textContent = '🔄 Actualizar desde Odoo'; btn.disabled = false; }
+  }).catch(function(e) {
+    alert('Error al cargar desde Odoo: ' + e.message);
+    if (btn) { btn.textContent = '🔄 Cargar desde Odoo'; btn.disabled = false; }
+  });
+}
+
+function fetchAllInvoices(cfg, offset, accumulated) {
+  var batchSize = 500;
+  return odooJsonRpc(cfg, 'account.move', 'search_read', [
+    [
+      ['move_type', '=', 'out_invoice'],
+      ['state', '=', 'posted'],
+      ['payment_state', 'in', ['not_paid', 'in_payment', 'partial']]
+    ]
+  ], {
+    fields: [
+      'name', 'invoice_date', 'invoice_date_due', 'payment_state',
+      'amount_total', 'amount_residual', 'partner_id',
+      'invoice_user_id', 'administrador', 'responsable_cobranza_id',
+      'invoice_line_ids'
+    ],
+    limit: batchSize,
+    offset: offset
+  }).then(function(records) {
+    if (!records || !records.length) { return accumulated; }
+
+    // Get product categories for all invoice lines in this batch
+    var lineIds = [];
+    records.forEach(function(r) {
+      if (r.invoice_line_ids) {
+        r.invoice_line_ids.forEach(function(lid) { lineIds.push(lid); });
+      }
+    });
+
+    return odooJsonRpc(cfg, 'account.move.line', 'search_read', [
+      [['id', 'in', lineIds], ['product_id', '!=', false]]
+    ], {
+      fields: ['move_id', 'product_category_id'],
+      limit: lineIds.length + 100
+    }).then(function(lines) {
+      // Build line->category map
+      var catMap = {};
+      lines.forEach(function(l) {
+        if (l.move_id && l.product_category_id) {
+          catMap[l.move_id[0]] = l.product_category_id[1] || '';
+        }
+      });
+
+      // Parse each invoice
+      records.forEach(function(r) {
+        var prod = catMap[r.id] || 'Sin categoría';
+        if (prod.indexOf('All / ') === 0) { prod = prod.slice(6); }
+        var isConsorcio = /consorcio en regla/i.test(prod);
+
+        var factDate = r.invoice_date ? parseDate(r.invoice_date) : null;
+        var vencDate = null;
+        var vencStr = '';
+
+        if (isConsorcio) {
+          vencDate = r.invoice_date_due ? parseDate(r.invoice_date_due) : null;
+          vencStr = vencDate ? fmtDate(vencDate) : '';
+        } else {
+          if (factDate) {
+            vencDate = new Date(factDate.getTime());
+            vencDate.setDate(vencDate.getDate() + 30);
+            vencStr = fmtDate(vencDate);
+          }
+        }
+
+        var dias = 0;
+        if (vencDate) {
+          dias = Math.max(0, Math.floor((TODAY - vencDate) / 86400000));
+        }
+
+        var bucket = dias === 0 ? 'Al dia' :
+                     dias <= 30 ? '1-30' :
+                     dias <= 60 ? '31-60' :
+                     dias <= 90 ? '61-90' :
+                     dias <= 120 ? '91-120' : '+120';
+
+        // payment_state mapping
+        var estado = r.payment_state === 'not_paid' ? 'Sin pagar' :
+                     r.payment_state === 'in_payment' ? 'En proceso de pago' :
+                     r.payment_state === 'partial' ? 'Pago parcial' : r.payment_state;
+
+        // Saldo real: en proceso de pago -> total (debito programado, aun no acreditado)
+        var saldo = (r.payment_state === 'in_payment') ? r.amount_total : r.amount_residual;
+
+        var adminNombre = r.administrador ? r.administrador[1] : 'Sin administración';
+        var respNombre = r.responsable_cobranza_id ? r.responsable_cobranza_id[1] : 'Sin asignar';
+        var vendedor = r.invoice_user_id ? r.invoice_user_id[1] : 'Sin asignar';
+        var cliente = r.partner_id ? r.partner_id[1] : '';
+
+        accumulated.push({
+          estado: estado,
+          num: r.name || '',
+          fechaFact: factDate ? fmtDate(factDate) : '',
+          fechaVenc: vencStr,
+          cliente: cliente,
+          total: r.amount_total || 0,
+          saldo: saldo || 0,
+          dias: dias,
+          bucket: bucket,
+          vendedor: vendedor,
+          respCobranza: respNombre,
+          producto: prod,
+          admin: adminNombre,
+        });
+      });
+
+      if (records.length === batchSize) {
+        return fetchAllInvoices(cfg, offset + batchSize, accumulated);
+      }
+      return accumulated;
+    });
+  });
+}
+
+function odooJsonRpc(cfg, model, method, args, kwargs) {
+  return fetch(ODOO_URL + '/web/dataset/call_kw', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      jsonrpc: '2.0', method: 'call', id: Date.now(),
+      params: {
+        model: model, method: method,
+        args: args || [],
+        kwargs: Object.assign({ context: {} }, kwargs || {})
+      }
+    })
+  }).then(function(r) { return r.json(); }).then(function(res) {
+    if (res.error) { throw new Error(res.error.data ? res.error.data.message : JSON.stringify(res.error)); }
+    return res.result;
+  });
+}
+
+</script>
+
+
+<!-- ADMIN MODAL -->
+<div class="admin-overlay" id="admin-overlay">
+  <div class="admin-box">
+    <h2>🔐 Panel de administración</h2>
+    <p>Solo para el administrador del sistema. Configurá las credenciales para todos los usuarios.</p>
+
+    <div id="admin-login-section">
+      <div class="admin-field">
+        <label>Usuario administrador</label>
+        <input type="text" id="adm-user" placeholder="admin" autocomplete="off">
+      </div>
+      <div class="admin-field">
+        <label>Contraseña</label>
+        <input type="password" id="adm-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkAdmin()">
+      </div>
+      <div class="admin-err" id="adm-err">Usuario o contraseña incorrectos.</div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn-p" onclick="checkAdmin()">Ingresar</button>
+        <button class="btn-s" onclick="closeAdmin()">Cancelar</button>
+      </div>
+    </div>
+
+    <div id="admin-config-section" style="display:none">
+      <div style="background:var(--green-bg);border-radius:var(--r);padding:8px 11px;font-size:11px;color:var(--green);margin-bottom:14px">
+        ✓ Sesión de administrador activa
+      </div>
+
+      <div class="admin-section">
+        <div class="admin-section-title">Conexión Odoo</div>
+        <div class="admin-field"><label>Base de datos</label>
+          <input type="text" id="adm-db" placeholder="nombre_base_datos"></div>
+        <div class="admin-field"><label>Usuario (email)</label>
+          <input type="text" id="adm-odoo-user" placeholder="usuario@gestionar.com"></div>
+        <div class="admin-field"><label>API Key de Odoo</label>
+          <input type="password" id="adm-odoo-key" placeholder="API key"></div>
+        <div style="display:flex;gap:7px;margin-top:6px">
+          <button class="btn-p" onclick="adminSaveOdoo()">Guardar Odoo</button>
+          <button class="btn-s" onclick="adminTestOdoo()">Probar conexión</button>
+        </div>
+        <div id="adm-odoo-result" style="font-size:11px;margin-top:7px"></div>
+      </div>
+
+      <div class="admin-section">
+        <div class="admin-section-title">Gmail OAuth (credenciales Google)</div>
+        <div class="admin-field"><label>Client ID</label>
+          <input type="text" id="adm-gmail-id" placeholder="xxxx.apps.googleusercontent.com"></div>
+        <div class="admin-field"><label>Client Secret</label>
+          <input type="password" id="adm-gmail-secret" placeholder="GOCSPX-..."></div>
+        <div style="margin-top:6px">
+          <button class="btn-p" onclick="adminSaveGmail()">Guardar Gmail</button>
+        </div>
+      </div>
+
+      <div class="admin-section" style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-s" onclick="adminLogout()">Cerrar sesión admin</button>
+        <button class="btn-s" onclick="closeAdmin()">Cerrar panel</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

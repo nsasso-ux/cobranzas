@@ -575,6 +575,7 @@ window.addEventListener('DOMContentLoaded',function(){
             <div class="progress-envio"><div class="progress-envio-bar" id="envio-pbar" style="width:0%"></div></div>
             <div style="font-size:11px;color:var(--text3)" id="envio-prog-lbl"></div>
           </div>
+          <button class="btn-s" style="font-size:10px;padding:3px 8px;margin-top:6px;float:right" onclick="resetEnvioState()">↺ Resetear</button>
           <button class="btn-send-all" id="btn-send-all" onclick="startEnvio()" style="margin-top:10px" disabled>
             🚀 Enviar seleccionados
           </button>
@@ -582,15 +583,42 @@ window.addEventListener('DOMContentLoaded',function(){
         <div class="envio-summary">
           <div style="font-size:12px;font-weight:600;margin-bottom:8px">Opciones de envío</div>
           <div class="cfg-row" style="flex-direction:column;align-items:flex-start;gap:6px">
-            <label style="min-width:auto"><input type="checkbox" id="opt-adjuntar" style="margin-right:5px">Adjuntar PDFs de facturas desde Odoo</label>
+            <label style="min-width:auto"><input type="checkbox" id="opt-adjuntar" style="margin-right:5px">Adjuntar PDFs desde Google Drive</label>
             <label style="min-width:auto"><input type="checkbox" id="opt-cc" style="margin-right:5px">Enviar copia a mí mismo</label>
-            <label style="min-width:auto"><input type="checkbox" id="opt-registro" checked style="margin-right:5px">Registrar en CRM como actividad</label>
+            <label style="min-width:auto"><input type="checkbox" id="opt-registro" checked style="margin-right:5px">Registrar en CRM y Sheet</label>
           </div>
-          <div class="cfg-row" style="margin-top:6px">
-            <label style="min-width:auto;font-size:12px;color:var(--text2)">Asunto personalizado:</label>
+          <div class="cfg-row" style="margin-top:8px;gap:6px">
+            <label style="min-width:auto;font-size:12px;color:var(--text2)">Plantilla:</label>
+            <select id="opt-plantilla" style="font-family:inherit;font-size:11px;padding:4px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text);flex:1" onchange="applyPlantilla()">
+              <option value="">— Plantilla por defecto —</option>
+            </select>
+            <button class="btn-s" style="font-size:10px;padding:3px 8px;white-space:nowrap" onclick="openPlantillasModal()">⚙ Gestionar</button>
+          </div>
+          <div class="cfg-row" style="margin-top:4px">
+            <label style="min-width:auto;font-size:12px;color:var(--text2)">Asunto:</label>
           </div>
           <div class="cfg-row">
             <input type="text" id="opt-subject" value="Estado de cuenta de sus consorcios — " placeholder="Asunto del mail">
+          </div>
+          <div id="drive-status-bar" style="margin-top:6px;font-size:11px;color:var(--text3)"></div>
+        </div>
+
+        <!-- Modal plantillas -->
+        <div id="plantillas-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+          <div style="background:var(--surface);border-radius:12px;padding:24px;width:580px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+              <div style="font-size:15px;font-weight:700">Plantillas de mail</div>
+              <button onclick="closePlantillasModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">×</button>
+            </div>
+            <div id="plantillas-list" style="margin-bottom:16px"></div>
+            <div style="border-top:1px solid var(--border);padding-top:16px">
+              <div style="font-size:12px;font-weight:600;margin-bottom:8px">Nueva plantilla</div>
+              <input id="pt-nombre" type="text" placeholder="Nombre de la plantilla" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);margin-bottom:8px;background:var(--surface);color:var(--text)">
+              <input id="pt-asunto" type="text" placeholder="Asunto del mail" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);margin-bottom:8px;background:var(--surface);color:var(--text)">
+              <textarea id="pt-cuerpo" placeholder="Cuerpo del mail. Usá: {admin}, {saldo}, {dias}, {responsable}, {fecha}, {detalle}" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);height:120px;resize:vertical;background:var(--surface);color:var(--text)"></textarea>
+              <div style="font-size:10px;color:var(--text3);margin:4px 0 10px">Variables disponibles: <code>{admin}</code> <code>{saldo}</code> <code>{dias}</code> <code>{responsable}</code> <code>{fecha}</code> <code>{detalle}</code></div>
+              <button class="btn-p" style="font-size:12px" onclick="guardarPlantilla()">Guardar plantilla</button>
+            </div>
           </div>
         </div>
         <div class="envio-log" id="envio-log">
@@ -2792,7 +2820,7 @@ function startOAuth() {
       'client_id=' + encodeURIComponent(cfg.clientId),
       'redirect_uri=' + encodeURIComponent('https://localhost'),
       'response_type=code',
-      'scope=' + encodeURIComponent('https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email'),
+      'scope=' + encodeURIComponent('https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets'),
       'access_type=offline',
       'prompt=consent',
       'code_challenge=' + encodeURIComponent(challenge),
@@ -3126,7 +3154,7 @@ var envioSelected = {};
 
 function renderEnvioPage() {
   var cfg = cfgLoad();
-  var hasConfig = !!(cfg.clientId && cfg.clientSecret);
+  var hasConfig = !!(cfg.clientId);
   var noEl = document.getElementById('envio-no-config');
   var mainEl = document.getElementById('envio-main');
   if (noEl) { noEl.style.display = hasConfig ? 'none' : 'block'; }
@@ -3139,6 +3167,13 @@ function renderEnvioPage() {
     });
   }
   renderEnvioList();
+
+  loadPlantillasSelect();
+  loadMailsFromSheet();
+  if (driveToken && driveToken.expiry > Date.now()) updateDriveStatus('conectado');
+  else updateDriveStatus('');
+  // Reset any stuck state when entering the page
+  if (!envioRunning) resetEnvioState();
 }
 
 function renderEnvioList() {
@@ -3369,11 +3404,26 @@ function logEnvio(msg, type) {
 
 var envioRunning = false;
 
-function startEnvio() {
+function resetEnvioState() {
+  envioRunning = false;
+  var btn = document.getElementById('btn-send-all');
+  if (btn) { btn.disabled = false; btn.textContent = 'Enviar seleccionados'; }
+  var prog = document.getElementById('envio-progress');
+  if (prog) prog.style.display = 'none';
+}
+
+
+
+function doEnvio() {
   if (envioRunning) { return; }
   var token = tokenLoad();
-  if (!token || !token.access_token || token.expiry <= Date.now()) {
-    alert('Tu sesion Gmail expiró. Volvé a Configuración y autorizá Gmail.');
+  if (!token || !token.access_token) {
+    alert('No tenés Gmail configurado. Andá a Configuración y autorizá Gmail primero.');
+    return;
+  }
+  // If expired, try to continue anyway (token may still work for a few minutes)
+  if (token.expiry <= Date.now() - 300000) { // 5 min grace period
+    alert('Tu sesión Gmail expiró. Volvé a Configuración y autorizá Gmail.');
     return;
   }
   var sel = getAdmins().filter(function(a) {
@@ -3386,6 +3436,11 @@ function startEnvio() {
   var registrar = document.getElementById('opt-registro') ? document.getElementById('opt-registro').checked : true;
   var subjectBase = (document.getElementById('opt-subject') ? document.getElementById('opt-subject').value : 'Estado de cuenta de sus consorcios').trim();
   var senderEmail = token.email || '';
+  // If no email in token, try to get it from config
+  if (!senderEmail) {
+    var cfg = cfgLoad();
+    senderEmail = cfg.odooUser || '';
+  }
   envioRunning = true;
   var btnEl = document.getElementById('btn-send-all');
   if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Enviando...'; }
@@ -3473,6 +3528,7 @@ function startEnvio() {
     });
   }
   sendNext(0);
+
 }
 
 
@@ -3811,6 +3867,356 @@ function odooJsonRpc(cfg, model, method, args, kwargs) {
     return res.result;
   });
 }
+
+
+// ══════════════════════════════════════════════════════
+// DRIVE + SHEET + PLANTILLAS MODULE
+// ══════════════════════════════════════════════════════
+var SHEET_ID = '1ME0uEmljiXVOl6zbB9HnA88fajrWNMgyMqRmqsBi9H8';
+var DRIVE_FOLDER_NAME = 'Facturas Gestionar';
+var EXEC_MAILS = {"Mauro Amaya": "mamaya@gestionar.com", "Andrea Otero": "aotero@gestionar.com", "Gonzalo Molino": "gmolino@gestionar.com", "Cecilia Benavidez": "cbenavidez@gestionar.com"};
+
+// ── DRIVE OAUTH ──
+var driveToken = null;
+
+function getDriveToken() {
+  // Drive uses the same Gmail token — scopes include drive.readonly + spreadsheets
+  return new Promise(function(resolve, reject) {
+    var tok = tokenLoad();
+    if (tok && tok.access_token && tok.expiry > Date.now()) {
+      driveToken = tok;
+      resolve(tok.access_token);
+      return;
+    }
+    // Token missing or expired — ask user to re-authorize Gmail (which now includes Drive)
+    if (!confirm('Necesitás autorizar Google nuevamente para acceder al Drive.\nHacé click en OK para ir a Configuración y autorizá Gmail.')) {
+      reject('Autorización cancelada');
+      return;
+    }
+    goPg('config');
+    reject('Redirigido a Configuración — autorizá Gmail (incluye acceso a Drive)');
+  });
+}
+
+
+
+function updateDriveStatus(state) {
+  var bar = document.getElementById('drive-status-bar');
+  if (!bar) return;
+  if (state === 'conectado') bar.innerHTML = '<span style="color:var(--green)">✓ Drive conectado — PDFs disponibles</span>';
+  else if (state === 'buscando') bar.innerHTML = '<span style="color:var(--amber)">⏳ Buscando carpeta en Drive...</span>';
+  else bar.innerHTML = '<span style="color:var(--red)">✗ Drive no conectado — <button class="btn-s" style="font-size:10px;padding:2px 7px" onclick="connectDrive()">Conectar Drive</button></span>';
+}
+
+function connectDrive() {
+  updateDriveStatus('buscando');
+  getDriveToken().then(function(tok) {
+    updateDriveStatus('conectado');
+    alert('✓ Google Drive listo. Podés adjuntar PDFs al enviar mails.');
+  }).catch(function(e) {
+    updateDriveStatus('');
+    if (e && e.indexOf && e.indexOf('Redirigido') >= 0) return; // already redirected
+    alert('Para usar Drive: andá a Configuración y autorizá Gmail. Eso incluye el acceso al Drive automáticamente.');
+    goPg('config');
+  });
+}
+
+// ── FIND PDF IN DRIVE ──
+var driveFolderIds = null;
+
+function getDriveFolderIds(token) {
+  if (driveFolderIds) return Promise.resolve(driveFolderIds);
+  return fetch('https://www.googleapis.com/drive/v3/files?q=' +
+    encodeURIComponent('name="' + DRIVE_FOLDER_NAME + '" and mimeType="application/vnd.google-apps.folder"') +
+    '&fields=files(id,name)', {
+    headers: { Authorization: 'Bearer ' + token }
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (!data.files || !data.files.length) throw new Error('No se encontró la carpeta "' + DRIVE_FOLDER_NAME + '" en tu Drive.');
+    var rootId = data.files[0].id;
+    // Get subfolders A, B, C
+    return fetch('https://www.googleapis.com/drive/v3/files?q=' +
+      encodeURIComponent('"' + rootId + '" in parents and mimeType="application/vnd.google-apps.folder"') +
+      '&fields=files(id,name)', {
+      headers: { Authorization: 'Bearer ' + token }
+    }).then(function(r) { return r.json(); }).then(function(sub) {
+      var ids = [rootId];
+      if (sub.files) sub.files.forEach(function(f) { ids.push(f.id); });
+      driveFolderIds = ids;
+      return ids;
+    });
+  });
+}
+
+function findPDFInDrive(token, invoiceNum) {
+  return getDriveFolderIds(token).then(function(folderIds) {
+    var safeNum = invoiceNum.replace(/[^a-zA-Z0-9\-]/g, '*');
+    var parentQ = folderIds.map(function(id) { return '"' + id + '" in parents'; }).join(' or ');
+    var q = '(' + parentQ + ') and name contains "' + invoiceNum.replace(/\//g, '') + '" and mimeType="application/pdf"';
+    return fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) +
+      '&fields=files(id,name)&pageSize=5', {
+      headers: { Authorization: 'Bearer ' + token }
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (!data.files || !data.files.length) throw new Error('PDF no encontrado: ' + invoiceNum);
+      return data.files[0].id;
+    });
+  });
+}
+
+function downloadPDFFromDrive(token, fileId) {
+  return fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', {
+    headers: { Authorization: 'Bearer ' + token }
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Error al descargar PDF (' + r.status + ')');
+    return r.arrayBuffer();
+  }).then(function(buf) {
+    var bytes = new Uint8Array(buf);
+    var bin = '';
+    for (var i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  });
+}
+
+function getPDFFromDrive(invoiceNum) {
+  if (!driveToken || driveToken.expiry <= Date.now()) {
+    return getDriveToken().then(function(tok) {
+      return findPDFInDrive(tok, invoiceNum).then(function(fid) { return downloadPDFFromDrive(tok, fid); });
+    });
+  }
+  return findPDFInDrive(driveToken.access_token, invoiceNum).then(function(fid) {
+    return downloadPDFFromDrive(driveToken.access_token, fid);
+  });
+}
+
+// ── SHEET INTEGRATION ──
+function sheetRequest(token, method, path, body) {
+  return fetch('https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + path, {
+    method: method,
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(function(r) { return r.json(); });
+}
+
+function initSheet(token) {
+  // Ensure sheets exist
+  return sheetRequest(token, 'GET', '?fields=sheets.properties.title').then(function(data) {
+    var existing = (data.sheets || []).map(function(s) { return s.properties.title; });
+    var needed = ['Historial_Mails', 'Clientes_Mails', 'Plantillas'];
+    var toAdd = needed.filter(function(n) { return existing.indexOf(n) < 0; });
+    if (!toAdd.length) return;
+    var reqs = toAdd.map(function(title) { return { addSheet: { properties: { title: title } } }; });
+    return sheetRequest(token, 'POST', ':batchUpdate', { requests: reqs }).then(function() {
+      // Add headers
+      var headers = [
+        { range: 'Historial_Mails!A1:G1', values: [['Fecha','Hora','Ejecutivo','Administracion','Mail destino','Plantilla','Estado']] },
+        { range: 'Clientes_Mails!A1:C1', values: [['Administracion','Mail','Agregado por']] },
+        { range: 'Plantillas!A1:D1', values: [['Nombre','Asunto','Cuerpo','Creado por']] },
+      ];
+      return sheetRequest(token, 'POST', '/values:batchUpdate', {
+        valueInputOption: 'RAW',
+        data: headers.map(function(h) { return { range: h.range, values: h.values }; })
+      });
+    });
+  });
+}
+
+function logMailToSheet(token, adminNombre, mailDest, plantillaNombre, estado) {
+  var now = new Date();
+  var fecha = now.toLocaleDateString('es-AR');
+  var hora = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  var ejecutivo = token.email || 'Desconocido';
+  return initSheet(token.access_token || token).then(function() {
+    return sheetRequest(token.access_token || token, 'POST', '/values/Historial_Mails!A:G:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS', {
+      values: [[fecha, hora, ejecutivo, adminNombre, mailDest, plantillaNombre || 'Defecto', estado]]
+    });
+  }).catch(function() { /* Sheet logging optional */ });
+}
+
+function saveMailToSheet(token, adminNombre, mail) {
+  return initSheet(token.access_token || token).then(function() {
+    return sheetRequest(token.access_token || token, 'POST', '/values/Clientes_Mails!A:C:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS', {
+      values: [[adminNombre, mail, token.email || 'Desconocido']]
+    });
+  }).catch(function() { /* Sheet save optional */ });
+}
+
+function loadMailsFromSheet() {
+  // Non-blocking, completely silent — Sheet is optional
+  try {
+    var tok = tokenLoad();
+    if (!tok || !tok.access_token) return;
+    sheetRequest(tok.access_token, 'GET', '/values/Clientes_Mails!A:B').then(function(data) {
+      if (!data || !data.values || data.values.length < 2) return;
+      var saved = mailsLoad();
+      var changed = false;
+      data.values.slice(1).forEach(function(row) {
+        if (row[0] && row[1]) {
+          var key = row[0].toLowerCase();
+          if (!saved[key]) { saved[key] = row[1]; changed = true; }
+        }
+      });
+      if (changed) { mailsSave(saved); renderEnvioList(); }
+    }).catch(function() { /* Sheet not authorized yet — OK */ });
+  } catch(e) { /* ignore */ }
+}
+
+// ── PLANTILLAS ──
+var PLANTILLAS_KEY = 'gestionar_plantillas_v1';
+
+function plantillasLoad() {
+  try { return JSON.parse(localStorage.getItem(PLANTILLAS_KEY) || '[]'); } catch(e) { return []; }
+}
+function plantillasSave(arr) { localStorage.setItem(PLANTILLAS_KEY, JSON.stringify(arr)); }
+
+function openPlantillasModal() {
+  renderPlantillasList();
+  var m = document.getElementById('plantillas-modal');
+  if (m) m.style.display = 'flex';
+}
+
+function closePlantillasModal() {
+  var m = document.getElementById('plantillas-modal');
+  if (m) m.style.display = 'none';
+  loadPlantillasSelect();
+}
+
+function renderPlantillasList() {
+  var list = document.getElementById('plantillas-list');
+  if (!list) return;
+  var arr = plantillasLoad();
+  if (!arr.length) { list.innerHTML = '<div style="font-size:12px;color:var(--text3);margin-bottom:8px">No hay plantillas guardadas aún.</div>'; return; }
+  list.innerHTML = arr.map(function(p, i) {
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--surface2);border-radius:var(--r);margin-bottom:6px">' +
+      '<div><div style="font-size:12px;font-weight:600">' + p.nombre + '</div>' +
+      '<div style="font-size:10px;color:var(--text3)">' + p.asunto + '</div></div>' +
+      '<button class="btn-s" style="font-size:10px;padding:2px 8px;color:var(--red)" onclick="eliminarPlantilla(' + i + ')">Eliminar</button>' +
+      '</div>';
+  }).join('');
+}
+
+function guardarPlantilla() {
+  var nombre = (document.getElementById('pt-nombre').value || '').trim();
+  var asunto = (document.getElementById('pt-asunto').value || '').trim();
+  var cuerpo = (document.getElementById('pt-cuerpo').value || '').trim();
+  if (!nombre || !cuerpo) { alert('Completá el nombre y el cuerpo de la plantilla.'); return; }
+  var arr = plantillasLoad();
+  arr.push({ nombre: nombre, asunto: asunto, cuerpo: cuerpo });
+  plantillasSave(arr);
+  // Save to Sheet too
+  var tok = tokenLoad();
+  if (tok && tok.access_token) {
+    saveMailToSheet(tok, nombre, asunto).catch(function(){});
+    initSheet(tok.access_token).then(function() {
+      sheetRequest(tok.access_token, 'POST', '/values/Plantillas!A:D:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS', {
+        values: [[nombre, asunto, cuerpo, tok.email || '']]
+      });
+    }).catch(function(){});
+  }
+  document.getElementById('pt-nombre').value = '';
+  document.getElementById('pt-asunto').value = '';
+  document.getElementById('pt-cuerpo').value = '';
+  renderPlantillasList();
+  alert('✓ Plantilla guardada.');
+}
+
+function eliminarPlantilla(idx) {
+  if (!confirm('Eliminar esta plantilla?')) return;
+  var arr = plantillasLoad();
+  arr.splice(idx, 1);
+  plantillasSave(arr);
+  renderPlantillasList();
+}
+
+function loadPlantillasSelect() {
+  var sel = document.getElementById('opt-plantilla');
+  if (!sel) return;
+  while (sel.options.length > 1) sel.remove(1);
+  plantillasLoad().forEach(function(p, i) {
+    var o = document.createElement('option');
+    o.value = i;
+    o.textContent = p.nombre;
+    sel.appendChild(o);
+  });
+}
+
+function applyPlantilla() {
+  var sel = document.getElementById('opt-plantilla');
+  if (!sel || sel.value === '') return;
+  var arr = plantillasLoad();
+  var p = arr[parseInt(sel.value)];
+  if (!p) return;
+  var subj = document.getElementById('opt-subject');
+  if (subj && p.asunto) subj.value = p.asunto;
+}
+
+function buildMailBodyFromPlantilla(admin, plantillaIdx) {
+  var arr = plantillasLoad();
+  var p = (plantillaIdx !== '' && arr[parseInt(plantillaIdx)]) ? arr[parseInt(plantillaIdx)] : null;
+  if (!p) return buildMailHTML(admin);
+  var detalle = admin.rows.map(function(r) {
+    return r.fechaVenc + ' | ' + r.num + ' | ' + r.cliente + ' | $' + r.saldo.toLocaleString('es-AR');
+  }).join('\n');
+  var body = p.cuerpo
+    .replace(/\{admin\}/g, admin.short)
+    .replace(/\{saldo\}/g, fmt(admin.saldo))
+    .replace(/\{dias\}/g, admin.maxDias)
+    .replace(/\{responsable\}/g, admin.resps.join(', '))
+    .replace(/\{fecha\}/g, TODAY_S)
+    .replace(/\{detalle\}/g, detalle);
+  return '<html><body style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px">' +
+    '<pre style="font-family:Arial,sans-serif;white-space:pre-wrap;font-size:13px;line-height:1.6">' + body + '</pre>' +
+    '</body></html>';
+}
+
+// ── INLINE MAIL INPUT ──
+function openMailInline(adminNombre) {
+  var mail = prompt('Ingresá el mail para:\n' + adminNombre);
+  if (!mail || mail.indexOf('@') < 0) return;
+  mail = mail.trim().toLowerCase();
+  var mails = mailsLoad();
+  mails[adminNombre.toLowerCase()] = mail;
+  mailsSave(mails);
+  // Save to Sheet
+  var tok = tokenLoad();
+  if (tok && tok.access_token) saveMailToSheet(tok, adminNombre, mail).catch(function(){});
+  renderEnvioList();
+}
+
+// ── PATCH startEnvio to use Drive + Sheet + Plantillas ──
+function startEnvio() {
+  // Load mails from sheet first
+  loadMailsFromSheet();
+  // Check Drive if PDFs needed
+  var adjuntar = document.getElementById('opt-adjuntar') && document.getElementById('opt-adjuntar').checked;
+  if (adjuntar && (!driveToken || driveToken.expiry <= Date.now())) {
+    if (!confirm('Para adjuntar PDFs necesitás conectar Google Drive. Conectar ahora?')) {
+      document.getElementById('opt-adjuntar').checked = false;
+      _startEnvioOrig();
+      return;
+    }
+    getDriveToken().then(function() {
+      updateDriveStatus('conectado');
+      _startEnvioOrig();
+    }).catch(function(e) {
+      alert('No se pudo conectar Drive: ' + e + '\n\nSe enviará sin PDFs.');
+      document.getElementById('opt-adjuntar').checked = false;
+      _startEnvioOrig();
+    });
+    return;
+  }
+  _startEnvioOrig();
+}
+
+// ── PATCH sendNext to use Drive PDFs + Sheet logging ──
+// Override the pdf fetch to use Drive instead of Odoo
+function odooGetInvoicePDF(invoiceNumber) {
+  return getPDFFromDrive(invoiceNumber);
+}
+
+// openAddMail already patched via openMailInline
+function openAddMail(nombre) { openMailInline(nombre); }
+
+// ── INIT on envio page load ──
+
 
 </script>
 

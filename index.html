@@ -4183,27 +4183,29 @@ function openMailInline(adminNombre) {
 
 // ── PATCH startEnvio to use Drive + Sheet + Plantillas ──
 function startEnvio() {
-  // Load mails from sheet first
+  // Load mails from sheet (non-blocking)
   loadMailsFromSheet();
-  // Check Drive if PDFs needed
-  var adjuntar = document.getElementById('opt-adjuntar') && document.getElementById('opt-adjuntar').checked;
+
+  // If PDFs requested, check Drive token first
+  var adjEl = document.getElementById('opt-adjuntar');
+  var adjuntar = adjEl && adjEl.checked;
   if (adjuntar && (!driveToken || driveToken.expiry <= Date.now())) {
     if (!confirm('Para adjuntar PDFs necesitás conectar Google Drive. Conectar ahora?')) {
-      document.getElementById('opt-adjuntar').checked = false;
-      _startEnvioOrig();
-      return;
+      if (adjEl) adjEl.checked = false;
+      doEnvio();
+    } else {
+      getDriveToken().then(function() {
+        updateDriveStatus('conectado');
+        doEnvio();
+      }).catch(function(e) {
+        alert('No se pudo conectar Drive: ' + e + '\n\nSe enviará sin PDFs.');
+        if (adjEl) adjEl.checked = false;
+        doEnvio();
+      });
     }
-    getDriveToken().then(function() {
-      updateDriveStatus('conectado');
-      _startEnvioOrig();
-    }).catch(function(e) {
-      alert('No se pudo conectar Drive: ' + e + '\n\nSe enviará sin PDFs.');
-      document.getElementById('opt-adjuntar').checked = false;
-      _startEnvioOrig();
-    });
     return;
   }
-  _startEnvioOrig();
+  doEnvio();
 }
 
 // ── PATCH sendNext to use Drive PDFs + Sheet logging ──
